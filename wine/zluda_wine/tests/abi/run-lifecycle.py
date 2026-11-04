@@ -6,7 +6,6 @@ import importlib.util
 import json
 from pathlib import Path
 import shutil
-import statistics
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('wine_fixture_runner', HERE/'run-fixtures.py')
@@ -36,42 +35,27 @@ def validate_case(mode, code, output, events, pe_events):
         raise RuntimeError('lifecycle PE callback order/thread/refcount mismatch: '+mode)
 
 
-def timing_receipt(code,output):
-    rows=[line.removeprefix('TRANSITIONS: ') for line in output.splitlines() if line.startswith('TRANSITIONS: ')]
-    if code or 'PASS:' not in output or len(rows)!=1:
-        raise RuntimeError('Unix transition timing process failed or timed out')
-    value=json.loads(rows[0])
-    if (not isinstance(value,dict) or set(value)!={'iterations','frequency_hz','samples_ticks','baseline_ticks'} or
-        type(value['iterations']) is not int or value['iterations']!=200000 or
-        type(value['frequency_hz']) is not int or value['frequency_hz']<=0 or
-        any(not isinstance(value[k],list) or len(value[k])!=11 or
-            any(type(v) is not int or v<=0 for v in value[k]) for k in ('samples_ticks','baseline_ticks'))):
-        raise RuntimeError('invalid Unix transition timing receipt')
-    scale=1e9/value['frequency_hz']/value['iterations']
-    return dict(value,median_ns_per_call=statistics.median(value['samples_ticks'])*scale,
-        median_windows_baseline_ns=statistics.median(value['baseline_ticks'])*scale,
-        paired_delta_ns=[(a-b)*scale for a,b in zip(value['samples_ticks'],value['baseline_ticks'])],
-        scope='hosted-CPU-pinned-Wine-noop; full-CUDA-wrapper-and-Deck-W1-W2-pending')
-
-
 def run(args):
     for name,path in vars(args).items():
         if not isinstance(path,Path) or not path.is_absolute():
             raise ValueError('lifecycle paths must be absolute: '+name)
     if args.prefix.exists() or args.results.exists():
         raise ValueError('lifecycle prefix/results must be fresh')
-    for name in ('wine','wineserver','backend','probe','helper','transition'):
+    for name in ('wine','wineserver','backend','probe','helper'):
         if not getattr(args,name).is_file():
             raise ValueError('missing lifecycle fixture: '+name)
     common.admit_binaries(args,common.architecture(args))
     common.require_no_canonical_module(args.dll_dir)
+    base = common.admit_base(args.base_profile)
+    stubs = {arch+'/nvcuda.dll':digest for arch,digest in base['sha256'].items()}
     def inputs():
         return {'on':common.snapshot(args.on_root,common.ON_FILES),
-                'off':common.snapshot(args.off_root,common.GE_STUBS),
-                **{name:common.sha(getattr(args,name)) for name in ('backend','probe','helper','transition')}}
+                'off':common.snapshot(args.off_root,common.STUB_MODULES),
+                'base_artifact':common.admit_base(args.base_profile),
+                **{name:common.sha(getattr(args,name)) for name in ('backend','probe','helper')}}
     before=inputs()
-    if before['off']!=common.GE_STUBS:
-        raise ValueError('lifecycle off root differs from pinned GE stubs')
+    if before['off']!=stubs:
+        raise ValueError('lifecycle off root differs from the selected base artifact')
     for output in (args.prefix,args.results):
         if any(output==root or root in output.parents for root in (args.dll_dir,args.on_root,args.off_root)):
             raise ValueError('lifecycle output overlaps immutable tool inputs')
@@ -108,20 +92,12 @@ def run(args):
                                       'log':mode+'.log','events':events,'pe_events':pe_events,
                                       'module_root':env['WINEDLLPATH'],'backend_path':env['ZLUDA_WINE_BACKEND_PATH']})
             save();validate_case(mode,code,output,events,pe_events)
-        command=[str(args.wine),str(args.transition)]
-        audit=args.results/'unix-call-cost-backend.log'
-        code,output=common.execute(command,common.environment(args,'on',audit),30)
-        (args.results/'unix-call-cost.log').write_text(output)
-        manifest['unix_call_cost']=timing_receipt(code,output)
-        if audit.exists():
-            raise RuntimeError('pure Unix transition timing unexpectedly loaded the CUDA backend')
-        save()
         if inputs()!=before:
             raise RuntimeError('lifecycle changed immutable modules/backend/probes')
         for module,directory in (('x86_64-windows/nvcuda.dll','system32'),('i386-windows/nvcuda.dll','syswow64')):
             target=args.prefix/'drive_c/windows'/directory/'nvcuda.dll'
-            if target.is_symlink() or common.sha(target)!=common.GE_STUBS[module]:
-                raise RuntimeError('lifecycle changed the prefix GE stub')
+            if target.is_symlink() or common.sha(target)!=stubs[module]:
+                raise RuntimeError('lifecycle changed the prefix base stub')
         manifest['qualification']=QUALIFICATION
     finally:
         manifest['cleanup']=common.cleanup_server(args,boot);save()
@@ -132,7 +108,7 @@ def run(args):
 
 def main():
     parser=argparse.ArgumentParser(__doc__)
-    for name in ('wine','wineserver','dll-dir','on-root','off-root','backend','probe','helper','transition','prefix','results'):
+    for name in ('wine','wineserver','dll-dir','on-root','off-root','base-profile','backend','probe','helper','prefix','results'):
         parser.add_argument('--'+name,type=Path,required=True)
     run(parser.parse_args())
 

@@ -9,7 +9,7 @@ mkdir -p "$FIXTURE_BUILD_ROOT"
 cc --version > "$FIXTURE_BUILD_ROOT/TOOLCHAIN.txt"
 x86_64-w64-mingw32-gcc --version >> "$FIXTURE_BUILD_ROOT/TOOLCHAIN.txt"
 i686-w64-mingw32-gcc --version >> "$FIXTURE_BUILD_ROOT/TOOLCHAIN.txt"
-(cd "$here" && sha256sum backend.c probe.c backend-wow64.c probe32.c lifecycle.c lifecycle-helper.c lifecycle.h transition.c run-lifecycle.py ../wow64/backend.c \
+(cd "$here" && sha256sum backend.c probe.c backend-wow64.c probe32.c lifecycle.c lifecycle-helper.c lifecycle.h run-lifecycle.py ../wow64/backend.c \
     ../../api/wow64-backend-abi.tsv ../../api/wow64-required.txt build-fixtures.sh run-fixtures.py) \
     > "$FIXTURE_BUILD_ROOT/SOURCE-SHA256SUMS"
 python3 - "$here/../../api/wow64-backend-abi.tsv" "$FIXTURE_BUILD_ROOT/wow64-native-contract.h" <<'PY'
@@ -31,9 +31,5 @@ x86_64-w64-mingw32-gcc -std=c11 -O2 -Wall -Wextra -Werror -static-libgcc "$here/
     -o "$FIXTURE_BUILD_ROOT/lifecycle.exe"
 x86_64-w64-mingw32-gcc -std=c11 -O2 -Wall -Wextra -Werror -static-libgcc -shared \
     "$here/lifecycle-helper.c" -o "$FIXTURE_BUILD_ROOT/lifecycle-helper.dll"
-x86_64-w64-mingw32-gcc -std=c11 -O2 -Wall -Wextra -Werror -static-libgcc -D__WINESRC__ \
-    -MD -MF "$FIXTURE_BUILD_ROOT/transition.d" \
-    -I "$WINE_SDK_ROOT/include-generated" -I "$WINE_SDK_ROOT/include" \
-    "$here/transition.c" -o "$FIXTURE_BUILD_ROOT/transition.exe"
 (cd "$FIXTURE_BUILD_ROOT" && sha256sum libcuda.so.1 libcuda-wow64.so.1 probe.exe probe32.exe \
-    lifecycle.exe lifecycle-helper.dll transition.exe transition.d wow64-native-contract.h TOOLCHAIN.txt SOURCE-SHA256SUMS > SHA256SUMS)
+    lifecycle.exe lifecycle-helper.dll wow64-native-contract.h TOOLCHAIN.txt SOURCE-SHA256SUMS > SHA256SUMS)

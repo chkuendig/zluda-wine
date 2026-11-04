@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one CPU-only PE64 or PE32/WoW64 profile in an isolated A2 Wine tree."""
+"""Run a CPU-only PE64 or PE32/WoW64 profile in an isolated Wine tree."""
 import argparse
 from collections import Counter
 import fcntl
@@ -13,11 +13,8 @@ import stat
 import struct
 import subprocess
 
-GE_STUBS = {
-    'x86_64-windows/nvcuda.dll': '0939c5e19c3cce99668cd0f07db99aa2ede810690c37af9c70df273b924fdfd3',
-    'i386-windows/nvcuda.dll': '2685d96065ea86c301a3e56f06b61e1e96a22645b7f69e9866721ad2f9f8833f',
-}
-ON_FILES = set(GE_STUBS) | {'x86_64-unix/nvcuda.so'}
+STUB_MODULES = ('x86_64-windows/nvcuda.dll', 'i386-windows/nvcuda.dll')
+ON_FILES = set(STUB_MODULES) | {'x86_64-unix/nvcuda.so'}
 MODES = ('off-unset', 'on', 'off-zero', 'on-missing-backend', 'on-relative-backend', 'off-again')
 REQUIRED_EVENTS = {'backend-loaded': 1, 'cuInit': 2, 'native-dark-query': 2,
                    'dark-five-arguments': 1, 'dark-void-argument': 1,
@@ -112,6 +109,25 @@ def call_log(base):
 
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def admit_base(path):
+    if path.is_symlink() or not path.is_file():
+        raise ValueError('base profile must be a regular file')
+    profile = json.loads(path.read_text())
+    if not isinstance(profile, dict):
+        raise ValueError('base profile must be an object')
+    artifact = profile.get('stub_artifact', {})
+    hashes = artifact.get('sha256', {}) if isinstance(artifact, dict) else {}
+    if (type(profile.get('schema')) is not int or profile['schema'] != 1 or
+            not isinstance(profile.get('base'), str) or not re.fullmatch(r'[a-z0-9_.-]+', profile['base']) or
+            not isinstance(artifact, dict) or set(artifact) != {'archive_sha256', 'sha256'} or
+            not isinstance(hashes, dict) or
+            set(hashes) != {name.split('/')[0] for name in STUB_MODULES} or
+            any(not isinstance(value, str) or not re.fullmatch('[0-9a-f]{64}', value)
+                for value in [artifact.get('archive_sha256'), *hashes.values()])):
+        raise ValueError('base profile must pin its archive and both stub hashes')
+    return {'base': profile['base'], 'profile_sha256': sha(path), **artifact}
 
 
 def snapshot(root, expected):
@@ -256,10 +272,14 @@ def run(args):
     if not args.dll_dir.is_dir():
         raise ValueError('missing prepared Wine dll_dir')
     require_no_canonical_module(args.dll_dir)
-    before = {'on': snapshot(args.on_root, ON_FILES), 'off': snapshot(args.off_root, GE_STUBS),
-              'backend': sha(args.backend), 'probe': sha(args.probe)}
-    if before['off'] != GE_STUBS:
-        raise ValueError('off root differs from the exact pinned GE stubs')
+    base = admit_base(args.base_profile)
+    stubs = {arch + '/nvcuda.dll': digest for arch, digest in base['sha256'].items()}
+    def inputs():
+        return {'on': snapshot(args.on_root, ON_FILES), 'off': snapshot(args.off_root, STUB_MODULES),
+                'base_artifact': admit_base(args.base_profile), 'backend': sha(args.backend), 'probe': sha(args.probe)}
+    before = inputs()
+    if before['off'] != stubs:
+        raise ValueError('off root differs from the selected base artifact')
     for output in (args.prefix,args.results):
         if any(output==root or root in output.parents for root in (args.on_root,args.off_root,args.dll_dir)):
             raise ValueError('fixture output must be outside immutable module roots')
@@ -284,9 +304,7 @@ def run(args):
         save()
         if code or (args.results/'bootstrap-backend.log').exists() or (args.results/'bootstrap-backend.json').exists():
             raise RuntimeError('off-root Wine bootstrap failed or loaded the backend')
-        # A2 launcher bootstrap uses regular GE stubs in this disposable prefix.
-        # Wine's marked PE loader rebinds these same bytes through the selected
-        # module root for each new process; never swap on-root bytes here.
+        # The prefix keeps regular base stubs; each process selects its module root.
         for module, directory in (('x86_64-windows/nvcuda.dll','system32'),
                                   ('i386-windows/nvcuda.dll','syswow64')):
             target = args.prefix/'drive_c/windows'/directory/'nvcuda.dll'
@@ -326,14 +344,12 @@ def run(args):
                 raise RuntimeError('off/refused case produced a backend witness: '+mode)
             save()
         require_no_canonical_module(args.dll_dir)
-        after = {'on': snapshot(args.on_root, ON_FILES), 'off': snapshot(args.off_root, GE_STUBS),
-                 'backend': sha(args.backend), 'probe': sha(args.probe)}
-        if before != after:
+        if before != inputs():
             raise RuntimeError('fixture changed immutable input files')
         for module, directory in (('x86_64-windows/nvcuda.dll','system32'),
                                   ('i386-windows/nvcuda.dll','syswow64')):
             target = args.prefix/'drive_c/windows'/directory/'nvcuda.dll'
-            if target.is_symlink() or sha(target) != GE_STUBS[module]:
+            if target.is_symlink() or sha(target) != stubs[module]:
                 raise RuntimeError('fixture changed a prefix stub or made it a symlink')
         manifest['qualification'] = ('CPU-Wine-PE32-WoW64-pass; GPU-W1-W2-pending'
             if arch['winearch']=='wow64' else 'CPU-Wine-PE64-pass; GPU-W1-W2-pending')
@@ -348,7 +364,7 @@ def run(args):
 def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument('--winearch', choices=('win64','wow64'), default='win64')
-    for argument in ('wine','wineserver','dll-dir','on-root','off-root','backend','probe','prefix','results'):
+    for argument in ('wine','wineserver','dll-dir','on-root','off-root','base-profile','backend','probe','prefix','results'):
         parser.add_argument('--'+argument, type=Path, required=True)
     run(parser.parse_args())
 

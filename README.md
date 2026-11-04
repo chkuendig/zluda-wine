@@ -14,10 +14,6 @@ modules together using `wine/zluda_wine/build-bridge.sh`; do not mix targets.
 The production source capsule includes the admitted backend input closure and
 can rebuild all three targets offline without the original checkouts.
 
-Optional PE32 `ZLUDA_WINE_CALL_LOG` tracing is retained at the owner's request.
-It is disabled by default. `wine/w1-fixtures/tools/cuda-count` is a test-only
-counter, built exclusively into independent fixture output; it is not a
-shipping bridge input and must not be installed in the Proton product.
-
-The temporary public staging ref lives in chkuendig/ZLUDA. A later dedicated
-repository must receive these same commits without rewriting their history.
+Optional PE32 `ZLUDA_WINE_CALL_LOG` tracing is disabled by default. The CPU
+fixtures cover module identity, PE32 widths, ABI dispatch and lifecycle cleanup.
+Packaging builds and admits them from the selected bridge source and Wine SDK.

@@ -2,7 +2,7 @@ name: Wine bridge production and independent tests
 
 on:
   push:
-    branches: [component/zluda-wine-20261104]
+    branches: [cleanup-20261104, GE-Proton11-7-zluda]
     paths: ['wine/**', 'BACKEND-SOURCE.json', '.github/workflows/wine-bridge.yml']
   workflow_dispatch:
 
@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: chkuendig/ZLUDA
-          ref: 854720b624f2a61a447d9c3b69a3f986470a0149
+          ref: 0a5db154b067af26115a0843107ff8ca766fe3b9
           path: backend-source
           sparse-checkout: |
             cuda_types/src
@@ -36,7 +36,7 @@ jobs:
         run: rustup toolchain install 1.99.0 --profile minimal
       - name: Run every non-oracle Python test
         run: |
-          for name in production_admission candidate_import lifecycle pe_artifact stack_probe wine_runner backend_source; do
+          for name in production_admission lifecycle pe_artifact wine_runner backend_source; do
             python3 -m unittest discover -s wine/zluda_wine/tests -p "test_${name}.py"
           done
       - name: Verify the reviewed production input closure
@@ -74,7 +74,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: chkuendig/ZLUDA
-          ref: 854720b624f2a61a447d9c3b69a3f986470a0149
+          ref: 0a5db154b067af26115a0843107ff8ca766fe3b9
           path: backend-source
           sparse-checkout: |
             cuda_types/src
@@ -95,25 +95,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout digest-admitted backend declarations
-        uses: actions/checkout@v4
-        with:
-          repository: chkuendig/ZLUDA
-          ref: 854720b624f2a61a447d9c3b69a3f986470a0149
-          path: backend-source
-          sparse-checkout: |
-            cuda_types/src
-            cuda_macros/src
-            dark_api/src
-            zluda/src
       - name: Install fixture cross compilers
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64 gcc-mingw-w64-i686 mingw-w64-x86-64-dev mingw-w64-i686-dev
       - name: Build the independent W1 fixtures
         run: bash wine/w1-fixtures/build.sh "$RUNNER_TEMP/w1-fixtures"
-      - name: Run the counter self-test
-        run: bash wine/w1-fixtures/tools/cuda-count/selftest.sh "$RUNNER_TEMP/w1-fixtures/linux"
       - uses: actions/upload-artifact@v4
         with:
           name: w1-fixtures

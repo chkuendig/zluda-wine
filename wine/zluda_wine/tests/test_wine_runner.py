@@ -36,16 +36,19 @@ class WineRunner(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         root=Path(self.tmp.name)
         self.args=argparse.Namespace(**{key:root/key for key in
-            ('wine','wineserver','dll_dir','on_root','off_root','backend','probe','prefix','results')})
+            ('wine','wineserver','dll_dir','on_root','off_root','base_profile','backend','probe','prefix','results')})
         self.args.dll_dir.mkdir()
         for key in ('wine','wineserver','backend','probe'):
             getattr(self.args,key).write_bytes(b'test-only input')
         self.args.backend.write_bytes(backend_image());self.args.probe.write_bytes(probe_image())
         for name in runner.ON_FILES:
             path=self.args.on_root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'test-only on module')
-        for name in runner.GE_STUBS:
+        for name in runner.STUB_MODULES:
             path=self.args.off_root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(name.encode())
-        self.fake_stubs={name:runner.sha(self.args.off_root/name) for name in runner.GE_STUBS}
+        self.fake_stubs={name:runner.sha(self.args.off_root/name) for name in runner.STUB_MODULES}
+        self.profile={'schema':1,'base':'fixture-base','stub_artifact':{'archive_sha256':'a'*64,
+            'sha256':{name.split('/')[0]:digest for name,digest in self.fake_stubs.items()}}}
+        self.args.base_profile.write_text(json.dumps(self.profile))
 
     def test_launch_environment_has_exactly_one_root_and_backend_only_when_on(self):
         with patch.dict(os.environ,{'WINEDLLPATH':'/poison/a:/poison/b',
@@ -71,9 +74,24 @@ class WineRunner(unittest.TestCase):
 
     def test_only_exact_off_stub_hashes_admitted(self):
         with patch.object(runner,'execute') as execute:
-            with self.assertRaisesRegex(ValueError,'exact pinned GE stubs'):
+            (self.args.off_root/runner.STUB_MODULES[0]).write_bytes(b'wrong-base stub')
+            with self.assertRaisesRegex(ValueError,'selected base artifact'):
                 runner.run(self.args)
             execute.assert_not_called()
+
+    def test_base_profile_requires_an_explicit_archive_and_both_architectures(self):
+        for name in ('fixture-ge', 'fixture-valve'):
+            profile=dict(self.profile,base=name)
+            self.args.base_profile.write_text(json.dumps(profile))
+            self.assertEqual(runner.admit_base(self.args.base_profile)['base'],name)
+        malformed=[dict(self.profile,schema=True),dict(self.profile,base=''),
+                   dict(self.profile,stub_artifact={'sha256':{}}),
+                   dict(self.profile,stub_artifact={'archive_sha256':'invalid','sha256':{}})]
+        for profile in malformed:
+            self.args.base_profile.write_text(json.dumps(profile))
+            with self.assertRaises(ValueError):runner.admit_base(self.args.base_profile)
+        self.args.base_profile.unlink()
+        with self.assertRaisesRegex(ValueError,'regular file'):runner.admit_base(self.args.base_profile)
 
     def test_probe_profile_and_backend_machine_fail_before_execution(self):
         self.args.winearch='wow64'
@@ -111,11 +129,12 @@ class WineRunner(unittest.TestCase):
                         for i,(name,status) in enumerate(sorted(runner.WOW64_CALLS))))
                 else:self.assertNotIn('ZLUDA_WINE_CALL_LOG',env)
             return (1,'') if command[1]=='-k0' else (0,output)
-        with patch.object(runner,'GE_STUBS',self.fake_stubs),patch.object(runner,'execute',side_effect=execute),redirect_stdout(io.StringIO()):
+        with patch.object(runner,'execute',side_effect=execute),redirect_stdout(io.StringIO()):
             runner.run(self.args)
         result=json.loads((self.args.results/'RESULT.json').read_text())
         self.assertEqual(result['qualification'],'CPU-Wine-PE32-WoW64-pass; GPU-W1-W2-pending')
         self.assertEqual(result['architecture'],runner.architecture(self.args))
+        self.assertEqual(result['inputs']['base_artifact'],runner.admit_base(self.args.base_profile))
         self.assertEqual(len(result['cases']),6)
         self.assertEqual(result['cases'][1]['wow64_witness']['htod_offset'],260)
         self.assertEqual(len([command for command,_ in calls if command[1]==str(self.args.probe)]),6)
@@ -146,7 +165,7 @@ class WineRunner(unittest.TestCase):
         def execute(command,env,timeout):
             if command[1]=='wineboot.exe':self.args.prefix.mkdir()
             return (1,'') if command[1]=='-k0' else (0,'PASS: simulated but no real architecture receipt\n')
-        with patch.object(runner,'GE_STUBS',self.fake_stubs),patch.object(runner,'execute',side_effect=execute) as execute:
+        with patch.object(runner,'execute',side_effect=execute) as execute:
             with self.assertRaisesRegex(RuntimeError,'architecture receipt'):runner.run(self.args)
         self.assertEqual(execute.call_args.args[0],[str(self.args.wineserver),'-k0'])
 
@@ -159,7 +178,7 @@ class WineRunner(unittest.TestCase):
                 Path(env['ZLUDA_WINE_FIXTURE_AUDIT']).write_text(''.join(
                     (event+'\n')*count for event,count in runner.REQUIRED_EVENTS.items()))
             return (1,'') if command[1]=='-k0' else (0,'PASS: simulated control fixture only\n')
-        with patch.object(runner,'GE_STUBS',self.fake_stubs),patch.object(runner,'execute',side_effect=execute),redirect_stdout(io.StringIO()):
+        with patch.object(runner,'execute',side_effect=execute),redirect_stdout(io.StringIO()):
             runner.run(self.args)
         probes=[env for command,env,_ in calls if command[1]==str(self.args.probe)]
         self.assertEqual(len(probes),6)
@@ -176,7 +195,7 @@ class WineRunner(unittest.TestCase):
             elif command[1]==str(self.args.probe):
                 Path(env['ZLUDA_WINE_FIXTURE_AUDIT']).write_text('backend-loaded\n')
             return (1,'') if command[1]=='-k0' else (0,'PASS: simulated control fixture only\n')
-        with patch.object(runner,'GE_STUBS',self.fake_stubs),patch.object(runner,'execute',side_effect=execute) as execute:
+        with patch.object(runner,'execute',side_effect=execute) as execute:
             with self.assertRaisesRegex(RuntimeError,'off/refused case'):
                 runner.run(self.args)
         self.assertEqual(execute.call_args.args[0],[str(self.args.wineserver),'-k0'])
