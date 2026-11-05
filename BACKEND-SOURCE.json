@@ -1,7 +1,7 @@
 {
   "contract": "zluda-wine-backend-source-1",
   "repository": "https://github.com/chkuendig/ZLUDA",
-  "commit": "0a5db154b067af26115a0843107ff8ca766fe3b9",
+  "commit": "3289e30e351d2ab9de6f36d996c2ca45b13bce96",
   "source_inputs": {
     "cuda_macros/src/cuda.rs": "fe4c9326ccb34c894793f99e8f3d403e7f6acd440d6468ab3796003b8db2648a",
     "cuda_types/src/cuda.rs": "b6adddfb2635d66003d6a282cb96a1dbc86cdf9b20d2fed19378c9fc1466a7b6",
