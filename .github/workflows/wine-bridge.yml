@@ -1,0 +1,103 @@
+name: Wine bridge checks and tests
+
+on:
+  push:
+    branches: [main, proton-11.0-zluda]
+    paths: ['wine/**', '.github/workflows/wine-bridge.yml']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ZLUDA_WINE_BACKEND_SOURCE: ${{ github.workspace }}/backend-source
+      CARGO_BUILD_JOBS: "3"
+      CARGO_TERM_COLOR: never
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/wine-cpu-tests
+      ZLUDA_WINE_DECLARATIONS_ONLY: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout ZLUDA declarations
+        uses: actions/checkout@v4
+        with:
+          repository: chkuendig/ZLUDA
+          ref: 5220554de03a471de81a895e7b0dce3d10cf6f1c
+          path: backend-source
+          sparse-checkout: |
+            cuda_types/src
+            cuda_macros/src
+            dark_api/src
+            zluda/src
+      - name: Install the Rust toolchain
+        run: rustup toolchain install 1.99.0 --profile minimal
+      - name: Run Python unit tests
+        run: |
+          for name in wine_sdk pe_artifact backend_source; do
+            python3 -m unittest discover -s wine/zluda_wine/tests -p "test_${name}.py"
+          done
+      - name: Compile the Proton smoke test backend
+        run: |
+          python3 - <<'PYTHON'
+          import os
+          from pathlib import Path
+          import subprocess
+          root = Path(os.environ['RUNNER_TEMP']) / 'smoke-backend'
+          root.mkdir()
+          component = Path('wine/zluda_wine')
+          rows = [line.split('\t') for line in (component / 'api/wow64-backend-abi.tsv').read_text().splitlines()
+                  if line and not line.startswith('#')]
+          (root / 'wow64-native-contract.h').write_text(''.join(f'int {name}({args});\n' for name, args in rows))
+          subprocess.run(['cc', '-O2', '-shared', '-fPIC', '-pthread', '-I', str(root),
+                          str(component / 'tests/wow64/backend.c'), '-o', str(root / 'libcuda-fixture.so')], check=True)
+          PYTHON
+      - name: Check Linux declarations
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +1.99.0 check --locked -j 3 --lib --manifest-path wine/zluda_wine/Cargo.toml
+      - name: Check both GNU Windows declaration targets
+        run: |
+          rustup target add --toolchain 1.99.0 x86_64-pc-windows-gnu i686-pc-windows-gnu
+          for target in x86_64-pc-windows-gnu i686-pc-windows-gnu; do
+            cargo +1.99.0 check --locked -j 3 --lib --target "$target" --manifest-path wine/zluda_wine/Cargo.toml
+          done
+      - name: Check the canonical dark descriptors
+        run: python3 wine/zluda_wine/tests/abi/check-dark-layouts.py
+      - name: Run Rust unit tests and ELF loader tests
+        run: python3 wine/zluda_wine/tests/run_native_tests.py
+  pe32-luid:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      ZLUDA_WINE_BACKEND_SOURCE: ${{ github.workspace }}/backend-source
+      CARGO_BUILD_JOBS: "3"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/pe32-luid
+      ZLUDA_WINE_DECLARATIONS_ONLY: "1"
+    steps:
+      - name: Preserve the pinned source byte identities
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - name: Checkout ZLUDA declarations
+        uses: actions/checkout@v4
+        with:
+          repository: chkuendig/ZLUDA
+          ref: 5220554de03a471de81a895e7b0dce3d10cf6f1c
+          path: backend-source
+          sparse-checkout: |
+            cuda_types/src
+            cuda_macros/src
+            dark_api/src
+            zluda/src
+      - name: Install pinned Rust and PE32 standard library
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup target add --toolchain 1.99.0 i686-pc-windows-msvc
+      - name: Run actual PE32 stdcall and LUID failure-path probe
+        run: |
+          python3 wine/zluda_wine/tools/import_native_dark.py --check
+          python wine/zluda_wine/tests/run_pe32_luid.py
