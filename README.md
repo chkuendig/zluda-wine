@@ -35,7 +35,7 @@ cannot substitute for this tree. The supported Wine identities are in
 `wine/zluda_wine/tools/wine-providers.json`.
 
 The reference build is
-[`make/rules-zluda.mk`](https://github.com/chkuendig/proton-ge-custom/blob/proton-11.0-zluda/make/rules-zluda.mk)
+[`make/rules-zluda.mk`](https://github.com/chkuendig/Proton/blob/proton-11.0-zluda/make/rules-zluda.mk)
 in the Valve Proton fork. It builds Wine and prepares the SDK automatically.
 `WINE_SOURCE` must be the patched Proton Wine build copy after applying
 `patches/wine/`, including the callback-handler restoration patch. A pristine
@@ -43,7 +43,7 @@ Wine checkout is rejected by the SDK helper. Given the fork's checkout and its
 completed x86_64 Wine build, prepare a fresh SDK (replace the example paths):
 
 ```sh
-export PROTON_SOURCE=/absolute/path/to/proton-ge-custom
+export PROTON_SOURCE=/absolute/path/to/Proton
 export WINE_SOURCE=/absolute/path/to/patched/proton/wine/source
 export WINE_OBJECTS=/absolute/path/to/wine-x86_64-build
 export WINE_SDK_ROOT=/absolute/path/to/new/wine-sdk
@@ -149,7 +149,7 @@ path when an application needs it.
 GPU PhysX also needs patched dxvk-nvapi, `DXVK_NVAPI_ALLOW_OTHER_DRIVERS=1`
 and `DXVK_ENABLE_NVAPI=1`; see [Notes](#notes).
 
-The [Valve Proton fork](https://github.com/chkuendig/proton-ge-custom/tree/proton-11.0-zluda)
+The [Valve Proton fork](https://github.com/chkuendig/Proton/tree/proton-11.0-zluda)
 integrates the backend, bridge and matching Wine automatically. Enable it with
 `PROTON_ENABLE_ZLUDA=1` in the game's environment.
 
@@ -207,6 +207,6 @@ the Valve Proton 11.0 pin:
 Install and enable the patched dxvk-nvapi for the prefix, and launch with
 `DXVK_NVAPI_ALLOW_OTHER_DRIVERS=1` and `DXVK_ENABLE_NVAPI=1`. Proton also sets
 `PROTON_FORCE_NVAPI=1`. These patches do not require DXVK to report an NVIDIA
-vendor ID. The [Valve Proton fork](https://github.com/chkuendig/proton-ge-custom/tree/proton-11.0-zluda)
+vendor ID. The [Valve Proton fork](https://github.com/chkuendig/Proton/tree/proton-11.0-zluda)
 applies all three patches automatically; for a manual build, apply the Wine
 patch to Proton Wine and the dxvk-nvapi patches in the order above.
