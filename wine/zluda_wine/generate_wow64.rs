@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Canonical PE32 parameter types with target-evaluated ABI assertions (§17).
+//! Canonical PE32 parameter types with target-evaluated ABI assertions.
 use quote::{format_ident,quote};
 use std::{collections::BTreeMap,fs,path::Path};
 pub fn generate(here:&Path,out:&Path,root:&Path)->String {
@@ -24,7 +24,7 @@ pub fn generate(here:&Path,out:&Path,root:&Path)->String {
         let name=format_ident!("{}",row[0]);let sig=&signatures[row[0]];let stack:usize=row[3].parse().unwrap();
         let expected:Vec<usize>=row[5].split_whitespace().map(|s|s.parse().unwrap()).collect();
         assert_eq!(expected.len(),sig.inputs.len(),"PE32 parameter count: {}",row[0]);
-        assert_eq!(expected.iter().sum::<usize>(),stack,"PE32 reviewed width sum: {}",row[0]);
+        assert_eq!(expected.iter().sum::<usize>(),stack,"PE32 parameter width sum: {}",row[0]);
         let mut args=Vec::new();let mut sizes=Vec::new();
         for (i,arg) in sig.inputs.iter().enumerate() {
             let syn::FnArg::Typed(arg)=arg else{panic!("receiver")};let ty=&arg.ty;let ident=format_ident!("_arg{i}");

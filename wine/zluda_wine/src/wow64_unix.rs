@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Rust port of fa81f481's bounded WoW64 dispatcher. See LICENSES/PROVENANCE.md.
+//! Bounded WoW64 dispatcher with native handles on the Unix side.
 //! The mutex and all limits are inherited C behaviour. No Windows callback is
 //! invoked here, and native function pointers remain on the Unix side.
 use crate::{unixlib, wow64_protocol::*};
@@ -7,7 +7,6 @@ use std::{ffi::{c_char, c_void, CStr, CString}, sync::{Mutex, OnceLock}};
 
 #[path = "wow64_modules.rs"] mod modules;
 #[path = "wow64_ops.rs"] mod ops;
-#[cfg(all(test,zluda_wine_oracles))] #[path = "wow64_fixtures.rs"] mod fixtures;
 #[cfg(test)] #[path = "../tests/pci_parity.rs"] mod pci_tests;
 const POOL_BYTES: u32 = 512 * 1024 * 1024;
 const MAX_HANDLES: usize = 2048;

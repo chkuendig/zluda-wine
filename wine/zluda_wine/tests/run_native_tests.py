@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
-"""Run non-oracle Rust unit tests and the independent ELF provider-scope fixture."""
+"""Run Rust unit tests and the independent ELF provider-scope fixture."""
 import os
 from pathlib import Path
 import subprocess

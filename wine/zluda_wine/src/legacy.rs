@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Opaque compatibility identities; facts: specification §16.
+//! Opaque compatibility identities.
 use std::ffi::c_void;
 pub enum CUcoredumpCallbackIdentity {}
 pub type CUcoredumpCallbackHandle = *mut CUcoredumpCallbackIdentity;

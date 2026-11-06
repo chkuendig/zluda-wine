@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! COM projection from reviewed specification §15, independently authored.
+//! D3D11 COM types and vtable calls.
 use std::ffi::c_void;
 #[repr(C)] pub struct Guid {a:u32,b:u16,c:u16,d:[u8;8]}
 pub const TEXTURE:Guid=Guid{a:0x6f15aaf2,b:0xd208,c:0x4e89,d:[0x9a,0xb4,0x48,0x95,0x35,0xd3,0x4f,0x9c]};

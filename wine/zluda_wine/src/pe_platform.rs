@@ -1,26 +1,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Windows ABI projection from specification §§10–14. No header-inline code.
+//! Windows ABI types and entry points.
 use std::ffi::{c_char,c_void};
 pub type Handle=*mut c_void;
 
-// Specification §12.2 supplies the Win64 TEB self pointer at GS:0x30. It
+// The Win64 TEB self pointer is at GS:0x30. It
 // remains available through PE detach and adds no OS call to warmed routing.
 #[cfg(target_arch="x86_64")]
 #[inline]
 pub fn thread_identity()->usize {
-    #[cfg(windows)] {
-        let identity:usize;
-        unsafe {std::arch::asm!("mov {}, gs:[0x30]",out(reg) identity,options(nostack,readonly,preserves_flags));}
-        identity
-    }
-    #[cfg(not(windows))] {HOSTED_THREAD_ID.with(|cell|cell as *const _ as usize)}
+    let identity:usize;
+    unsafe {std::arch::asm!("mov {}, gs:[0x30]",out(reg) identity,options(nostack,readonly,preserves_flags));}
+    identity
 }
-
-// The PE projection is also compiled by native Linux CPU fixtures. This
-// const, Drop-free Linux cell is independent of Windows std TLS; the
-// coordinator explicitly confirmed its lifetime through PE teardown.
-#[cfg(not(windows))]
-thread_local! {static HOSTED_THREAD_ID:std::cell::Cell<u8>=const{std::cell::Cell::new(0)};}
 
 #[cfg_attr(windows,link(name="kernel32"))]
 extern "system" {
@@ -73,7 +64,7 @@ const _:()={
     assert!(std::mem::offset_of!(IoStatus,information)==8);
 };
 
-// Specification §14 supplies both NT data models. Only explicit PE64 padding
+// NT data models differ by pointer width. Only explicit PE64 padding
 // fields are omitted on PE32; pointer fields retain the target pointer width.
 #[cfg(target_pointer_width="32")]
 const _:()={

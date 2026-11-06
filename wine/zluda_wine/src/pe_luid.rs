@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Registry selection and close order from specification §14.
+//! Registry adapter selection with ordered handle cleanup.
 use crate::{cuda::*,pe_platform as os};
 #[cfg(target_arch="x86_64")] use crate::unixlib::Call;
 use std::ffi::c_void;

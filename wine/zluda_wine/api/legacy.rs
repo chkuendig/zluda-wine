@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-// Fresh declarations from CLEAN-ROOM-SPEC revision 2 sections 10–16 and ABI-FACTS.
+// Compatibility declarations supplementing the canonical CUDA API.
 use crate::{cuda::*, legacy::*};
 extern "system" {
     fn cuCoredumpDeregisterCompleteCallback(arg0: CUcoredumpCallbackHandle) -> CUresult;

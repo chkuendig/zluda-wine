@@ -50,6 +50,6 @@ for table in tables:
         assert returns[3] == 'u32' and returns[2].endswith('CUresult')
     records.append(dict(table, raw_uuid_hex=raw.hex(), slots=slots, returns=returns,
                         reserved_null_slots=sorted(set(range(table['native_words'])) - slots.keys())))
-print(json.dumps({'scope': 'Native source layout design check; no PE implementation qualified',
+print(json.dumps({'scope': 'Native CUDA table layout check',
                   'source_sha256': hashlib.sha256(source_path.read_bytes()).hexdigest(),
                   'tables': records}, indent=2))

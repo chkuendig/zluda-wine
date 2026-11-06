@@ -43,7 +43,7 @@ macro_rules! backend_status {
     ($($abi:tt fn $name:ident($($arg:ident: $ty:ty),*) -> $ret:ty;)*) => { $(
         pe_export! { $abi, $name($($arg: $ty),*) -> $ret, {
             $(let _ = $arg;)*
-            // build.rs attests that the packaged release backend ignores all
+            // build.rs checks that the packaged release backend ignores all
             // inputs. No Windows callback/union pointer, token or worker is
             // installed for an API it cannot implement.
             let mut call = Call::new(unixlib::function_id(stringify!($name)));

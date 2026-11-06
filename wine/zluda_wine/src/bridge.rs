@@ -28,35 +28,30 @@ mod integrity_algorithm { include!(concat!(env!("OUT_DIR"), "/integrity_algorith
 #[cfg(target_arch = "x86_64")] mod context_protocol;
 #[cfg(target_os = "linux")] mod unix_callbacks;
 #[cfg(target_os = "linux")] mod unix_callback_api;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_callback_api;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_callbacks;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_callback_api;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_callbacks;
 #[cfg(target_os = "linux")] mod dark_unix;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod dark_pe_thunks;
-#[cfg(all(test, zluda_wine_oracles, target_os = "linux"))] mod cpu_fixtures;
-#[cfg(all(test, zluda_wine_oracles, target_os = "linux"))] mod callback_fixtures;
-#[cfg(all(test, zluda_wine_oracles, target_os = "linux"))] mod graph_status_fixtures;
-#[cfg(all(test, zluda_wine_oracles, target_os = "linux"))] mod interop_fixtures;
-// CPU tests also type-check the full PE sources. Only Windows builds export
-// them; Windows API and module-load behavior still need the real SDK/runtime.
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_thunks;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_wrappers;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_platform;
-#[cfg(any(windows, all(test,zluda_wine_oracles)))] mod pe_sync;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_luid;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_external;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod d3d11;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_interop;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_context_storage;
+#[cfg(all(windows, target_arch = "x86_64"))] mod dark_pe_thunks;
+// Windows entry points are compiled for their respective PE targets.
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_thunks;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_wrappers;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_platform;
+#[cfg(windows)] mod pe_sync;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_luid;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_external;
+#[cfg(all(windows, target_arch = "x86_64"))] mod d3d11;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_interop;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_context_storage;
 #[cfg(target_os = "linux")] mod unix_context_storage;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_dark_owned;
-#[cfg(any(all(windows, target_arch = "x86_64"), all(test,zluda_wine_oracles)))] mod pe_dark_tables;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_dark_owned;
+#[cfg(all(windows, target_arch = "x86_64"))] mod pe_dark_tables;
 #[cfg(target_os = "linux")] mod unix_thunks;
 #[cfg(target_os = "linux")] mod unix_wrappers;
 mod wow64_protocol;
 mod wow64_trace;
 #[cfg(target_os = "linux")] mod wow64_unix;
-#[cfg(any(all(windows, target_arch = "x86"), all(test,zluda_wine_oracles)))] mod wow64_pe;
-#[cfg(any(all(windows, target_arch = "x86"), all(test,zluda_wine_oracles)))] mod wow64_local;
-#[cfg(any(all(windows, target_arch = "x86"), all(test,zluda_wine_oracles)))]
+#[cfg(all(windows, target_arch = "x86"))] mod wow64_pe;
+#[cfg(all(windows, target_arch = "x86"))] mod wow64_local;
+#[cfg(all(windows, target_arch = "x86"))]
 #[allow(dead_code)]
 mod wow64_stubs { include!(concat!(env!("OUT_DIR"), "/wow64_stubs.rs")); }

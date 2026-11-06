@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Byte-preserving external-handle adaptation; specification §11.
+//! Byte-preserving external-handle adaptation.
 use crate::{cuda::*,unixlib,pe_platform as os,pe_wrappers::raw};
 use std::ffi::c_void;
 use crate::pe_sync::Mutex;

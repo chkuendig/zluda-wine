@@ -115,7 +115,7 @@ unsafe fn deliver(args:[u64;16]) {
         match kind {
             protocol::STREAM=>{let f:unsafe extern "win64" fn(CUstream,CUresult,*mut c_void)=std::mem::transmute(r.callback);f(unixlib::unpack(args[3]),unixlib::result(args[4] as u32),data);},
             protocol::HOST=>{
-                // Internal reverse-call kind (§12.1); public host APIs remain status-only.
+                // Internal reverse-call kind; public host APIs remain status-only.
                 let f:unsafe extern "win64" fn(*mut c_void)=std::mem::transmute(r.callback);
                 f(data);
             },

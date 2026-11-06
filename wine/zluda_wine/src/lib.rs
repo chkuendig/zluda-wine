@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 #![allow(non_snake_case, improper_ctypes, improper_ctypes_definitions)]
 #[cfg(zluda_wine_generation_phase_0)]
-compile_error!("bridge generation failed: shipping admission");
+compile_error!("bridge generation failed: Wine SDK validation");
 #[cfg(zluda_wine_generation_phase_1)]
 compile_error!("bridge generation failed: canonical CUDA types");
 #[cfg(zluda_wine_generation_phase_2)]

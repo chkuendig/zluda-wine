@@ -5,9 +5,9 @@ version = "0.0.0"
 edition = "2021"
 publish = false
 license = "MIT OR Apache-2.0"
-description = "Opt-in x64 Wine CUDA bridge pilot; not a release replacement"
+description = "Wine CUDA bridge for ZLUDA"
 
-# Keep the pilot out of the backend workspace and its locked build graph.
+# Build independently of the backend workspace.
 [workspace]
 
 [lib]

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# Exact selectors from reviewed ABI attachment; duplicate triples rejected
+# CUDA procedure selectors; duplicate triples are rejected
 cuArray3DCreate	2000	0	cuArray3DCreate
 cuArray3DCreate	3020	0	cuArray3DCreate_v2
 cuArray3DGetDescriptor	2000	0	cuArray3DGetDescriptor

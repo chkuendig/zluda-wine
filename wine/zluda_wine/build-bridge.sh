@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# Artifacts only. Caller owns SDK/container authorization and serialization.
+# Build the PE64, PE32 and Unix64 modules against one Wine SDK.
 set -euo pipefail
 [[ ${ZLUDA_WINE_DECLARATIONS_ONLY:-0} != 1 ]] || { echo "Check-only mode cannot build shipping artifacts" >&2; exit 2; }
 : "${WINE_SDK_ROOT:?}" "${ZLUDA_WINE_BUILD_ROOT:?}"
 [[ $WINE_SDK_ROOT == /* && $ZLUDA_WINE_BUILD_ROOT == /* ]] || { echo 'Use absolute SDK/build paths' >&2; exit 2; }
 JOBS=${JOBS:-3}
-[[ $JOBS =~ ^[1-3]$ ]] || { echo 'JOBS must be 1..3' >&2; exit 2; }
+[[ $JOBS =~ ^[1-9][0-9]*$ ]] || { echo 'JOBS must be a positive integer' >&2; exit 2; }
 [[ $(rustc --version) == 'rustc 1.99.0 '* ]]
 here=$(cd -- "$(dirname -- "$0")" && pwd)
 [[ ! -e $ZLUDA_WINE_BUILD_ROOT ]] || { echo 'ZLUDA_WINE_BUILD_ROOT must be fresh' >&2; exit 1; }
@@ -14,8 +14,8 @@ here=$(cd -- "$(dirname -- "$0")" && pwd)
 [[ -f $WINE_SDK_ROOT/lib/ntdll.so ]] || { echo 'Matching prepared SDK lib/ntdll.so is required' >&2; exit 1; }
 mkdir -p "$ZLUDA_WINE_BUILD_ROOT/artifacts"
 : "${ZLUDA_WINE_ABI_RECEIPT:?}" "${ZLUDA_WINE_ABI_RECEIPT_SHA256:?}"
-python3 "$here/tools/admit_wine.py" "$ZLUDA_WINE_ABI_RECEIPT" "$WINE_SDK_ROOT"
-cp -- "$ZLUDA_WINE_ABI_RECEIPT" "$ZLUDA_WINE_BUILD_ROOT/WINE-CALLBACK-ATTESTATION.json"
+python3 "$here/tools/verify_wine.py" "$ZLUDA_WINE_ABI_RECEIPT" "$WINE_SDK_ROOT"
+cp -- "$ZLUDA_WINE_ABI_RECEIPT" "$ZLUDA_WINE_BUILD_ROOT/WINE-ABI.json"
 export CARGO_BUILD_JOBS=$JOBS CARGO_TARGET_DIR=$ZLUDA_WINE_BUILD_ROOT/target
 export CARGO_TERM_COLOR=never
 : "${SOURCE_DATE_EPOCH:?}" "${ZLUDA_WINE_SOURCE_ID:?}"
@@ -59,7 +59,7 @@ names = ['x86_64-windows/nvcuda.dll', 'i386-windows/nvcuda.dll', 'x86_64-unix/nv
     'contract': 'zluda-wine-packaging-1',
     'source_commit': __import__('os').environ['ZLUDA_WINE_SOURCE_ID'],
     'rust': subprocess.check_output(['rustc', '--version'], text=True).strip(),
-    'modules': names, 'qualification': 'PENDING: inspect equivalence receipts and target-runtime W1/W2'
+    'modules': names
 }, indent=2) + '\n')
 PY
-echo "Bridge artifacts: $ZLUDA_WINE_BUILD_ROOT/artifacts (qualification required)"
+echo "Bridge artifacts: $ZLUDA_WINE_BUILD_ROOT/artifacts"

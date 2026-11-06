@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! PE-owned WoW64 dark tables, context storage and heap records from fa81f481.
+//! PE-owned WoW64 dark tables, context storage and heap records.
 //! The off root does not contain this code. No native code/data address is
 //! returned to PE32, and destructors execute after releasing the storage lock.
 #![cfg_attr(not(windows), allow(dead_code))]

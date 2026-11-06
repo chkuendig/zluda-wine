@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0
- * Independent projection of reviewed ABI facts, specification §§10 and 12.
+ * Wine Unix-call adapter types and entry points.
  * No Wine headers or header-inline implementation enter this adapter.
  */
 #include <stdint.h>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT OR Apache-2.0
-"""Admit only reviewer-attested prepared Wine bytes; no source fragments."""
+"""Verify prepared Wine SDK bytes; no source fragments."""
 import hashlib
 import json
 import os
@@ -12,7 +12,7 @@ def main():
     expected = os.environ.get('ZLUDA_WINE_ABI_RECEIPT_SHA256', '')
     raw = receipt_path.read_bytes()
     if len(expected) != 64 or hashlib.sha256(raw).hexdigest() != expected:
-        raise ValueError('reviewer receipt digest must be explicitly pinned')
+        raise ValueError('ABI receipt digest must be explicitly pinned')
     r = json.loads(raw)
     providers = json.loads(Path(__file__).with_name('wine-providers.json').read_text())
     if r['contract'] != 'zluda-wine-prepared-abi-2' or r['wine_pin'] not in providers['wine_pins']:
@@ -20,7 +20,7 @@ def main():
     for flag in ['callback_id_zero', 'same_thread_destructor', 'process_exit', 'thread_exit',
                  'loader_lock_refusal', 'locally_scoped_strong_provider', 'eager_binding']:
         if r['verified'].get(flag) is not True:
-            raise ValueError('reviewer did not admit ' + flag)
+            raise ValueError('ABI receipt does not verify ' + flag)
     required = {'include/ntuser.h', 'include/winternl.h', 'include/winnt.h',
                 'dlls/user32/user_main.c', 'dlls/ntdll/signal_x86_64.c',
                 'dlls/ntdll/unix/signal_x86_64.c', 'dlls/ntdll/loader.c',
@@ -28,7 +28,7 @@ def main():
                 'dlls/ntdll/unix/unix_private.h'}
     if not required <= r['prepared_files'].keys() or 'lib/ntdll.so' not in r['sdk_files']:
         raise ValueError('incomplete prepared-source or strong-provider extent')
-    # Source identities are reviewer attestations bound by the explicitly
+    # Source identities are ABI metadata bound by the explicitly
     # pinned receipt digest. Production never opens those Wine source files.
     for records in [r['prepared_files'], r['sdk_files']]:
         for name, digest in records.items():
@@ -42,7 +42,7 @@ def main():
     for name, digest in r['sdk_files'].items():
         path = Path(name)
         if path.parts[0] in {'include', 'include-generated'} or path.suffix in {'.c', '.h', '.idl', '.rs'}:
-            raise ValueError('SDK source belongs in reviewer attestation metadata, not production inputs')
+            raise ValueError('SDK source belongs in ABI metadata, not production inputs')
         print('cargo:rerun-if-changed=' + str(sdk / path))
         if hashlib.sha256((sdk / path).read_bytes()).hexdigest() != digest:
             raise ValueError('prepared SDK bytes differ: ' + name)

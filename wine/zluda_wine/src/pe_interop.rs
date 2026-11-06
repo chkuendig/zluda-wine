@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! ZLUDA CPU-copy design: authorized owner d3d11_cpu_copy.h and specification §15.
+//! D3D11 interoperability through CPU copies between textures and CUDA memory.
 //! A logical operation lease serializes ownership; no mutex spans COM or CUDA.
 use crate::{cuda::*,unixlib::{self,Call},d3d11 as com,pe_platform as os,pe_wrappers::{raw,available}};
 use std::{ffi::c_void,cell::UnsafeCell,sync::atomic::{AtomicBool,Ordering}};

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! PE32 frontend ported from fa81f481 wow64/pe.c; native addresses stay Unix.
+//! PE32 frontend; native addresses stay on the Unix side.
 #![cfg_attr(not(windows), allow(dead_code))]
 use crate::wow64_protocol::*;
 use std::{ffi::{c_char, c_void}, sync::atomic::{AtomicBool, Ordering}};

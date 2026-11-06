@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Checked bounded memory, event, stream and texture operations from fa81f481.
+//! Checked bounded memory, event, stream and texture operations.
 use super::*;
 
 impl State {

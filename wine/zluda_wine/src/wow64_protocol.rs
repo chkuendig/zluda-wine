@@ -6,7 +6,7 @@ include!(concat!(env!("OUT_DIR"), "/wow64_contract.rs"));
 include!(concat!(env!("OUT_DIR"), "/schema.rs"));
 pub const MAGIC: u64 = 0x32454e4957414443;
 pub const VERSION: u32 = 4;
-// Owner protocol rule: append new operations and bump VERSION for schema
+// Protocol rule: append new operations and bump VERSION for schema
 // changes. Retired IDs stay reserved forever. ID 59 (formerly C32_DEVICE_UUID)
 // is reserved and returns UNSUPPORTED without accessing its argument words.
 pub const HELLO: u32 = u32::MAX;

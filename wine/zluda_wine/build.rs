@@ -26,16 +26,16 @@ fn declarations(source: &str, into: &mut BTreeMap<String, syn::Signature>) {
 
 // These APIs cannot execute a callback in the packaged release backend. Do
 // not manufacture callback ownership for them or forward a Windows function
-// pointer. An implementation in the backend must force an ownership review.
+// pointer. Backend implementations require matching callback lifetime handling.
 fn backend_status_guard(root: &std::path::Path, names: &BTreeSet<&str>, canonical: &BTreeMap<String, syn::Signature>, policy: &BTreeMap<&str,&str>) {
     let expected = BTreeSet::from(["cuGraphAddHostNode","cuGraphHostNodeGetParams","cuGraphHostNodeSetParams",
         "cuGraphExecHostNodeSetParams","cuGraphAddNode","cuGraphAddNode_v2","cuGraphNodeSetParams",
         "cuGraphExecNodeSetParams","cuGraphNodeGetParams","cuLaunchHostFunc","cuLaunchHostFunc_ptsz",
         "cuLaunchHostFunc_v2","cuLaunchHostFunc_v2_ptsz","cuUserObjectCreate"]);
-    assert_eq!(names,&expected,"status-only routes must be reviewed individually");
+    assert_eq!(names,&expected,"status-only route inventory changed");
     assert_eq!(names.iter().filter(|name| !canonical.contains_key(**name)).copied().collect::<BTreeSet<_>>(),
         BTreeSet::from(["cuGraphNodeGetParams","cuLaunchHostFunc_v2","cuLaunchHostFunc_v2_ptsz"]),
-        "canonical/compatibility status-only split changed; review before calling");
+        "canonical/compatibility status-only split changed");
     let path = root.join("zluda/src/lib.rs");
     println!("cargo:rerun-if-changed={}",path.display());
     let source = fs::read_to_string(path).expect("backend status guard needs zluda/src/lib.rs");
@@ -55,11 +55,11 @@ fn backend_status_guard(root: &std::path::Path, names: &BTreeSet<&str>, canonica
     }
     for name in names {
         assert!(!tokens.split(|c: char| !c.is_ascii_alphanumeric() && c!='_').any(|word| word==*name),
-            "{name}: backend now implements this API; review graph/exec callback ownership first");
+            "{name}: backend now implements this API; callback lifetime handling is required");
         // Compatibility names absent from canonical CUDA are deliberately
         // probed as optional symbols. They must also remain absent here.
         if !canonical.contains_key(*name) {
-            assert!(!source.contains(name),"{name}: compatibility backend implementation needs review");
+            assert!(!source.contains(name),"{name}: compatibility backend implementation changed");
         }
     }
     let path = root.join("zluda/src/impl/mod.rs");
@@ -72,7 +72,7 @@ fn backend_status_guard(root: &std::path::Path, names: &BTreeSet<&str>, canonica
     }).collect::<Vec<_>>();
     assert_eq!(release.len(),1);
     assert_eq!(release[0].block.to_token_stream().to_string(),"{ CUerror :: NOT_SUPPORTED }",
-        "release backend unsupported status changed; review status-only routes");
+        "release backend unsupported status changed");
     let expected_body: syn::ItemMacro=syn::parse_str(r#"
         macro_rules! unimplemented {
             ($($abi:literal fn $fn_name:ident( $($arg_id:ident : $arg_type:ty),* ) -> $ret_type:ty;)*) => {
@@ -93,7 +93,7 @@ fn backend_status_guard(root: &std::path::Path, names: &BTreeSet<&str>, canonica
         syn::Item::Macro(item) if item.ident.as_ref().is_some_and(|name| name=="unimplemented")=>Some(item),_=>None
     }).unwrap();
     assert_eq!(definition.mac.tokens.to_string(),expected_body.mac.tokens.to_string(),
-        "default backend body changed: prove input-independent refusal before status-only calls");
+        "default backend body changed: status-only calls require input-independent refusal");
 }
 
 
@@ -102,7 +102,7 @@ fn phase(value:usize) {GENERATION_PHASE.store(value,std::sync::atomic::Ordering:
 fn main() {
     println!("cargo:rustc-check-cfg=cfg(zluda_wine_generation_failed)");
     for n in 0..=7 {println!("cargo:rustc-check-cfg=cfg(zluda_wine_generation_phase_{n})");}
-    // A failure stays fatal, but exposes a source-free phase at a candidate location.
+    // Report the failing generation phase as a compiler error.
     if std::panic::catch_unwind(||generate(PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap()),
             PathBuf::from(env::var_os("OUT_DIR").unwrap()))).is_err() {
         println!("cargo:rustc-cfg=zluda_wine_generation_failed");
@@ -111,14 +111,13 @@ fn main() {
 }
 
 pub fn generate(here: PathBuf, out: PathBuf) {
-    println!("cargo:rustc-check-cfg=cfg(zluda_wine_oracles)");
     println!("cargo:rerun-if-env-changed=ZLUDA_WINE_BACKEND_SOURCE");
     let root = PathBuf::from(env::var_os("ZLUDA_WINE_BACKEND_SOURCE")
         .expect("explicit pinned ZLUDA_WINE_BACKEND_SOURCE is required"));
     assert!(root.is_absolute(), "backend source root must be absolute");
-    println!("cargo:rerun-if-changed={}", here.join("../../BACKEND-SOURCE.json").display());
-    assert!(Command::new("python3").arg(here.join("tests/check_production_inputs.py"))
-        .status().unwrap().success(), "production/backend source admission failed");
+    println!("cargo:rerun-if-changed={}", here.join("tools/backend_source.py").display());
+    assert!(Command::new("python3").arg(here.join("tools/backend_source.py"))
+        .status().unwrap().success(), "backend declaration validation failed");
     println!("cargo:rustc-check-cfg=cfg(zluda_wine_check_only)");
     println!("cargo:rerun-if-env-changed=ZLUDA_WINE_DECLARATIONS_ONLY");
     let check_only = env::var("ZLUDA_WINE_DECLARATIONS_ONLY").as_deref() == Ok("1");
@@ -141,10 +140,10 @@ pub fn generate(here: PathBuf, out: PathBuf) {
     }
     if !check_only {
         assert!(env::var_os("WINE_SDK_ROOT").is_some(), "shipping requires matching prepared Wine SDK");
-        let receipt=env::var_os("ZLUDA_WINE_ABI_RECEIPT").expect("shipping requires reviewer prepared-Wine attestation receipt");
+        let receipt=env::var_os("ZLUDA_WINE_ABI_RECEIPT").expect("shipping requires prepared-Wine ABI receipt");
         println!("cargo:rerun-if-changed={}",PathBuf::from(&receipt).display());
-        println!("cargo:rerun-if-changed={}",here.join("tools/admit_wine.py").display());
-        assert!(Command::new("python3").arg(here.join("tools/admit_wine.py"))
+        println!("cargo:rerun-if-changed={}",here.join("tools/verify_wine.py").display());
+        assert!(Command::new("python3").arg(here.join("tools/verify_wine.py"))
             .arg(receipt).arg(env::var_os("WINE_SDK_ROOT").unwrap()).status().unwrap().success());
     }
     phase(1);
@@ -163,7 +162,7 @@ pub fn generate(here: PathBuf, out: PathBuf) {
     let before = types.items.len();
     types.items.retain(|item| !matches!(item, syn::Item::Impl(item)
         if item.to_token_stream().to_string().contains("hip_runtime_sys")));
-    assert_eq!(before - types.items.len(), 1, "re-audit the CUDA-only type view");
+    assert_eq!(before - types.items.len(), 1, "CUDA-only type conversion changed");
     let items = types.items;
     fs::write(out.join("cuda_types.rs"), quote! {
         #[allow(warnings)] pub mod cuda { #(#items)* }

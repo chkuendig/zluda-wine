@@ -1,9 +1,18 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-"""Resolve and byte-admit the explicitly pinned backend source closure."""
+"""Validate the CUDA declarations used to generate the bridge."""
 import hashlib
-import json
 import os
 from pathlib import Path
+
+
+SOURCE_INPUTS = {
+    "cuda_macros/src/cuda.rs": "fe4c9326ccb34c894793f99e8f3d403e7f6acd440d6468ab3796003b8db2648a",
+    "cuda_types/src/cuda.rs": "b6adddfb2635d66003d6a282cb96a1dbc86cdf9b20d2fed19378c9fc1466a7b6",
+    "cuda_types/src/dark_api.rs": "3b7f25038ecb8208f7784755c16ff6d655a3aeadf3d2116e342522dfd331941b",
+    "dark_api/src/lib.rs": "69d27adc2465e27b0cb31d5e67306899ad2f3f4fa2a3d53b76cc49f022afb2dc",
+    "zluda/src/impl/mod.rs": "4b83a64de2a74ae2e98c8357813aca71f7436c72a9ecd871aa6e4d2baa97ca7e",
+    "zluda/src/lib.rs": "de960078b0d9a99022fe64f635765057368471708445fac6b8c559e9a941aa23"
+}
 
 
 def backend_source():
@@ -11,9 +20,14 @@ def backend_source():
     if not value or not Path(value).is_absolute():
         raise ValueError('ZLUDA_WINE_BACKEND_SOURCE must name an absolute pinned backend source root')
     root = Path(value).resolve(strict=True)
-    contract = json.loads((Path(__file__).resolve().parents[3] / 'BACKEND-SOURCE.json').read_text())
-    for name, expected in contract['source_inputs'].items():
+    for name, expected in SOURCE_INPUTS.items():
         path = (root / name).resolve(strict=True)
         if not path.is_relative_to(root) or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
             raise ValueError('Pinned backend source differs: ' + name)
     return root
+
+
+if __name__ == "__main__":
+    root = backend_source()
+    for name in SOURCE_INPUTS:
+        print("cargo:rerun-if-changed=" + str(root / name))

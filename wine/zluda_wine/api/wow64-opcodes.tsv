@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# fa81f481 bounded WoW64 operation order
+# Bounded WoW64 operation order
 0	C32_INIT
 1	C32_VERSION
 2	C32_DEVICE_COUNT

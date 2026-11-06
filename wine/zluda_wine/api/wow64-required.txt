@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# fa81f481 load_backend required symbols, source order
+# Required backend symbols in load order
 cuInit
 cuDriverGetVersion
 cuDeviceGetCount

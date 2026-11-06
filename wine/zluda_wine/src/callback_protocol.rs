@@ -14,7 +14,7 @@ pub const LOG: u64 = 5;
 pub const COREDUMP: u64 = 6;
 // Context events carry (CUcontext,key); the PE record owns value/destructor.
 // Native dark put uses args[4]=token and args[5]=reserved zero, never PE data.
-// Kind7 was the retired context-storage worker route. It must stay rejected;
+// Kind 7 is reserved and must stay rejected;
 // synchronous context destructors use the separate fixed user32 callback ABI.
 
 pub unsafe fn submit(call: &mut crate::unixlib::Call) -> crate::cuda::CUresult {
