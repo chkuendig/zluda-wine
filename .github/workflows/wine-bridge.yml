@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: chkuendig/ZLUDA
-          ref: 5220554de03a471de81a895e7b0dce3d10cf6f1c
+          ref: c5d5f6c20afaf3925a3215f88c5e61366a46c937
           path: backend-source
           sparse-checkout: |
             cuda_types/src
@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: chkuendig/ZLUDA
-          ref: 5220554de03a471de81a895e7b0dce3d10cf6f1c
+          ref: c5d5f6c20afaf3925a3215f88c5e61366a46c937
           path: backend-source
           sparse-checkout: |
             cuda_types/src

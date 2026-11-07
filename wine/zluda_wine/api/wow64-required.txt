@@ -60,3 +60,4 @@ cuMemsetD8Async
 cuMemsetD16Async
 cuMemsetD32Async
 cuFuncGetAttribute
+cuTexRefSetAddress2D_v3

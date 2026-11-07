@@ -343,6 +343,8 @@ forward!(cuTexRefSetMipmapLevelClamp(tex: *mut c_void, lo: f32, hi: f32) => C32_
 forward!(cuTexRefSetMaxAnisotropy(tex: *mut c_void, value: u32) => C32_TEX_MIPMAP [pointer(tex), 3, value]);
 forward!(cuTexRefSetAddress(out: *mut usize, tex: *mut c_void, device: u32, bytes: u32) => C32_TEX_ADDRESS [pointer(tex), device, bytes, pointer(out)]);
 forward!(cuTexRefSetAddress_v2(out: *mut usize, tex: *mut c_void, device: u32, bytes: usize) => C32_TEX_ADDRESS [pointer(tex), device, bytes as u32, pointer(out)]);
+forward!(cuTexRefSetAddress2D(tex: *mut c_void, desc: *const crate::cuda::CUDA_ARRAY_DESCRIPTOR_v1, device: u32,
+    pitch: u32) => C32_TEX_ADDRESS_2D [pointer(tex), pointer(desc), device, pitch]);
 forward!(cuModuleGetFunction(out: *mut *mut c_void, module: *mut c_void, name: *const c_char) => C32_FUNCTION [pointer(out), pointer(module), pointer(name)]);
 forward!(cuLaunchKernel(function: *mut c_void, gx: u32, gy: u32, gz: u32, bx: u32, by: u32, bz: u32, shared: u32,
     stream: *mut c_void, params: *mut *mut c_void, extra: *mut *mut c_void) => C32_LAUNCH

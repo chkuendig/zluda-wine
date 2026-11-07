@@ -39,6 +39,7 @@ static CONTEXT_CALLS:AtomicU32=AtomicU32::new(0);
         if c.opcode==C32_FUNC_ATTRIBUTE {assert_eq!(c.args[2],0);ptr::<u32>(c.args[1]).write(128);}
         c.result=0;return 0;
     }
+    if c.opcode==C32_TEX_ADDRESS_2D {assert_eq!(&c.args[..4],&[0x40000050,1,256,256]);c.result=0;return 0;}
     assert_eq!(c.opcode,C32_DEVICE_ATTR);
     assert!(matches!(c.args[1],50|33|34));
     CALLS.fetch_add(1,Ordering::Relaxed);
@@ -66,7 +67,7 @@ unsafe fn invoke(out:*mut i8,node:*mut u32,device:i32)->i32 {
 }
 fn main(){unsafe{
     assert_eq!(std::mem::size_of::<usize>(),4);
-    assert_eq!(VERSION,6);assert_eq!(C32_RESERVED_59,59);
+    assert_eq!(VERSION,7);assert_eq!(C32_RESERVED_59,59);
     std::env::set_var("PROTON_ENABLE_ZLUDA","1");
     // The trace opens on the first traced export; this is a Windows path, so
     // the frontend uses CreateFileA rather than Wine's Unix-path conversion.
@@ -92,9 +93,9 @@ fn main(){unsafe{
     assert_eq!(value,0x12345678);
     SERVER_VERSION.store(VERSION,Ordering::Relaxed);
     for opcode in [C32_DEVICE_ATTR,C32_RESERVED_59] {
-        for version in [3,4,5] {
+        for version in [3,4,5,6] {
             let mut old=Call32::new(opcode,&[0xdeadbeef,50,0]);old.version=version;
-            assert!(!old.valid(),"v6 receiver must reject an old packet");
+            assert!(!old.valid(),"v7 receiver must reject an old packet");
             assert_eq!(zluda_wine_call((&mut old as *mut Call32).cast()),0xc000000du32 as i32);
             assert_eq!(old.result,801);
         }
@@ -112,6 +113,7 @@ fn main(){unsafe{
     assert_eq!(context,0x40000010);
     assert_eq!(raw(wow64_stubs::cuD3D10RegisterResource as *const (),&[1,0]),801);
     assert_eq!(raw(wow64_pe::cuModuleLoadFatBinary as *const (),&[&mut module as *mut u32 as usize as u32,0x1ee55001]),0);
+    assert_eq!(raw(wow64_pe::cuTexRefSetAddress2D as *const (),&[0x40000050,1,256,256]),0);
     let function=0x40000030;
     for (f,a) in [
         (wow64_pe::cuFuncSetBlockShape as *const (),vec![function,8,4,1]),
@@ -159,6 +161,6 @@ fn main(){unsafe{
     assert_eq!(count("cuCtxSetCacheConfig",0),1);assert_eq!(count("cuCtxSetCacheConfig",1),1);
     assert_eq!(count("cuFuncSetCacheConfig",400),1);assert_eq!(count("cuFuncSetSharedMemConfig",1),1);
     assert_eq!(count("cuModuleLoadDataEx",0),1);
-    assert_eq!(rows.len(),5+7+8+1+16,"one line per traced export call");
-    println!("PE32 SCOPE PASS: LUID=801; PCI and JIT forwarding; legacy D3D10 context, unsupported registration, fatbin/config/param/launch exact stdcall cleanup; v3/v4/v5 refusal, hints and call trace passed");
+    assert_eq!(rows.len(),5+7+8+1+17,"one line per traced export call");
+    println!("PE32 SCOPE PASS: LUID=801; PCI and JIT forwarding; legacy D3D10 context, unsupported registration, fatbin/config/param/launch exact stdcall cleanup; v3/v4/v5/v6 refusal, hints and call trace passed");
 }}

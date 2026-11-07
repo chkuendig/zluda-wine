@@ -2,6 +2,9 @@
 //! Checked bounded memory, event, stream and texture operations.
 use super::*;
 
+#[repr(C)]
+struct ArrayDescriptor { width: usize, height: usize, format: u32, channels: u32 }
+
 impl State {
     pub(super) fn stream(&self, id: u32) -> Result<usize, i32> {
         if id == 0 { Ok(0) }
@@ -177,6 +180,20 @@ impl State {
                 if op == C32_HTOD_ASYNC { native("cuMemcpyHtoDAsync_v2", &[address, host as u64, x[2], stream]) }
                 else { native("cuMemcpyDtoHAsync_v2", &[host as u64, address, x[2], stream]) }
             }
+            C32_TEX_ADDRESS_2D => {
+                let h = self.handle(a[0], 5).ok_or(INVALID_HANDLE)?;
+                if a[1] == 0 || a[1] > u32::MAX - 16 { return Err(INVALID); }
+                let d = ArrayDescriptor { width: read32(a[1]) as usize, height: read32(a[1]+4) as usize,
+                    format: read32(a[1]+8), channels: read32(a[1]+12) };
+                let bytes = match d.format { 1|8 => 1, 2|9|0x10 => 2, 3|0x0a|0x20 => 4, _ => return Err(INVALID) };
+                if d.width == 0 || d.height == 0 || ![1,2,4].contains(&d.channels) { return Err(INVALID); }
+                let row = d.width.checked_mul(d.channels as usize).and_then(|n| n.checked_mul(bytes))
+                    .filter(|&n| n <= a[3] as usize).ok_or(INVALID)?;
+                let span = (d.height-1).checked_mul(a[3] as usize).and_then(|n| n.checked_add(row))
+                    .filter(|&n| n <= u32::MAX as usize).ok_or(INVALID)?;
+                let device = self.translate(a[2], span as u32)?;
+                native("cuTexRefSetAddress2D_v3", &[self.handles[h].native as u64, address(&d), device, a[3] as u64])
+            }
             C32_TEX_FORMAT | C32_TEX_FLAGS | C32_TEX_ADDRESS | C32_TEX_FILTER | C32_TEX_ADDRESS_MODE | C32_TEX_MIPMAP => {
                 let h = self.handle(a[0], 5).ok_or(INVALID_HANDLE)?;
                 let value = self.handles[h].native as u64;
@@ -212,3 +229,5 @@ impl State {
         }
     }
 }
+
+#[cfg(test)] #[path = "../tests/texref_2d.rs"] mod pitched_tests;

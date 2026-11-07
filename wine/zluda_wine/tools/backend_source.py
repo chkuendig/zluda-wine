@@ -11,7 +11,7 @@ SOURCE_INPUTS = {
     "cuda_types/src/dark_api.rs": "3b7f25038ecb8208f7784755c16ff6d655a3aeadf3d2116e342522dfd331941b",
     "dark_api/src/lib.rs": "69d27adc2465e27b0cb31d5e67306899ad2f3f4fa2a3d53b76cc49f022afb2dc",
     "zluda/src/impl/mod.rs": "4b83a64de2a74ae2e98c8357813aca71f7436c72a9ecd871aa6e4d2baa97ca7e",
-    "zluda/src/lib.rs": "de960078b0d9a99022fe64f635765057368471708445fac6b8c559e9a941aa23"
+    "zluda/src/lib.rs": "47770e378d251cf21545524681d0c6241e0c53d5e35681be96da7764b49132fe"
 }
 
 
