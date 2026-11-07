@@ -6,6 +6,26 @@ type GlobalsFn = unsafe extern "C" fn(*mut *const c_char, *mut *const c_void,
 type ArgsFn = unsafe extern "C" fn(*mut ArgInfo, *mut u32, usize) -> i32;
 
 unsafe fn status(value: i32) -> Answer { if value == 0 { Ok(()) } else { Err(value) } }
+unsafe fn load_data(module: &mut usize, image: *const u8, a: &[u32; 16], extended: bool) -> Answer {
+    if !extended { return native("cuModuleLoadData", &[mutable(module), image as usize as u64]); }
+    let count = a[2] as usize;
+    if count > 64 { return Err(UNSUPPORTED); }
+    if count != 0 && (a[3] == 0 || a[4] == 0 ||
+        a[3] as u64 + count as u64 * 4 > 1 << 32 || a[4] as u64 + count as u64 * 4 > 1 << 32) {
+        return Err(INVALID);
+    }
+    let mut values = [0usize; 64];
+    for (i, value) in values[..count].iter_mut().enumerate() {
+        // Later JIT options include nested pointer arrays, outside this ABI.
+        if read32(a[3] + i as u32 * 4) > 16 { return Err(UNSUPPORTED); }
+        *value = read32(a[4] + i as u32 * 4) as usize;
+    }
+    let result = native("cuModuleLoadDataEx", &[mutable(module), image as usize as u64, count as u64,
+        if count == 0 { 0 } else { a[3] as u64 },
+        if count == 0 { 0 } else { values.as_mut_ptr() as usize as u64 }]);
+    for (i, value) in values[..count].iter().enumerate() { write32(a[4] + i as u32 * 4, *value as u32); }
+    result
+}
 unsafe fn fatbin_has_ptx(data: *const u8) -> i32 {
     let magic = std::ptr::read_unaligned(data.cast::<u32>());
     let version = std::ptr::read_unaligned(data.add(4).cast::<u16>());
@@ -61,7 +81,7 @@ impl State {
         }
         Ok(())
     }
-    unsafe fn load_module(&mut self, a: &[u32; 16]) -> Answer {
+    unsafe fn load_module(&mut self, a: &[u32; 16], extended: bool) -> Answer {
         if a[0] == 0 || a[1] == 0 { return Err(INVALID); }
         let mut module = 0usize;
         let mut image = ptr::<u8>(a[1]).cast_const();
@@ -78,7 +98,7 @@ impl State {
             if fatbin_has_ptx(wrapper.data) == 0 { return Err(209); }
             image = (&wrapper as *const Wrapper).cast();
         }
-        native("cuModuleLoadData", &[mutable(&mut module), image as usize as u64])?;
+        load_data(&mut module, image, a, extended)?;
         let metadata = (|| {
             let table = get_table(&[0xee,0x37,0x6a,0x1b,0xb8,0x58,0x42,0xeb,0xa5,0x2d,0x9a,0x10,0x6d,0x50,0xd9,0x14])?;
             if *table == 0 || *table.add(1) == 0 { return Err(UNSUPPORTED); }
@@ -154,7 +174,8 @@ impl State {
     }
     pub(super) unsafe fn dispatch_module(&mut self, op: u32, a: &[u32; 16]) -> Answer {
         match op {
-            C32_MODULE_LOAD => self.load_module(a),
+            C32_MODULE_LOAD => self.load_module(a, false),
+            C32_MODULE_LOAD_EX => self.load_module(a, true),
             C32_MODULE_UNLOAD => {
                 let slot = self.handle(a[0], 2).ok_or(INVALID_HANDLE)?;
                 native("cuCtxSynchronize", &[])?;
@@ -220,3 +241,5 @@ impl State {
         }
     }
 }
+
+#[cfg(test)] #[path = "../tests/module_load.rs"] mod tests;

@@ -62,3 +62,4 @@
 # Append-only IDs: retired IDs remain reserved and must never be reused.
 # ID 59 was C32_DEVICE_UUID in version 3; retired in version 4.
 59	C32_RESERVED_59
+60	C32_MODULE_LOAD_EX

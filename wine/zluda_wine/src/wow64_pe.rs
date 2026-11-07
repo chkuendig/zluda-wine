@@ -307,6 +307,8 @@ forward!(cuMemsetD8Async(dst: u32, value: u8, count: usize, stream: *mut c_void)
 forward!(cuMemsetD16Async(dst: u32, value: u16, count: usize, stream: *mut c_void) => C32_MEMSET_ASYNC [dst, value as u32, count as u32, pointer(stream), 2]);
 forward!(cuMemsetD32Async(dst: u32, value: u32, count: usize, stream: *mut c_void) => C32_MEMSET_ASYNC [dst, value, count as u32, pointer(stream), 4]);
 forward!(cuModuleLoadData(out: *mut *mut c_void, image: *const c_void) => C32_MODULE_LOAD [pointer(out), pointer(image)]);
+forward!(cuModuleLoadDataEx(out: *mut *mut c_void, image: *const c_void, count: u32, options: *mut crate::cuda::CUjit_option,
+    values: *mut *mut c_void) => C32_MODULE_LOAD_EX [pointer(out), pointer(image), count, pointer(options), pointer(values)]);
 forward!(cuModuleUnload(module: *mut c_void) => C32_MODULE_UNLOAD [pointer(module)]);
 forward!(cuModuleGetGlobal(device: *mut u32, bytes: *mut u32, module: *mut c_void, name: *const c_char) => C32_MODULE_GLOBAL [pointer(device), pointer(bytes), pointer(module), pointer(name), 4]);
 forward!(cuModuleGetGlobal_v2(device: *mut u32, bytes: *mut usize, module: *mut c_void, name: *const c_char) => C32_MODULE_GLOBAL [pointer(device), pointer(bytes), pointer(module), pointer(name), 4]);

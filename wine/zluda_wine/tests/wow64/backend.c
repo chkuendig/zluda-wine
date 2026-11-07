@@ -110,6 +110,8 @@ int cuMemsetD32Async(uint64_t dst, unsigned value, size_t count, void *stream)
 { ENTER(cuMemsetD32Async); snapshot[1] = (uintptr_t)stream; for (size_t i = 0; i < count; ++i) ((uint32_t *)(uintptr_t)dst)[i] = value; return 0; }
 int cuModuleLoadData(void **out, const void *image)
 { ENTER(cuModuleLoadData); if (!image) return 1; *out = (void *)0x2000; return 0; }
+int cuModuleLoadDataEx(void **out, const void *image, unsigned count, unsigned *options, void **values)
+{ ENTER(cuModuleLoadDataEx); (void)count; (void)options; (void)values; if (!image) return 1; *out = (void *)0x2000; return 0; }
 int cuModuleUnload(void *module) { ENTER(cuModuleUnload); return module == (void *)0x2000 ? 0 : 400; }
 int cuModuleGetFunction(void **out, void *module, const char *name)
 { ENTER(cuModuleGetFunction); if (module != (void *)0x2000 || strcmp(name, "kernel")) return 500; *out = (void *)0x3000; return 0; }

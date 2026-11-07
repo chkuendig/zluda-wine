@@ -44,6 +44,7 @@ cuMemsetD8Async	uint64_t, unsigned char, size_t, void *
 cuMemsetD16Async	uint64_t, unsigned short, size_t, void *
 cuMemsetD32Async	uint64_t, unsigned, size_t, void *
 cuModuleLoadData	void **, const void *
+cuModuleLoadDataEx	void **, const void *, unsigned, unsigned *, void **
 cuModuleUnload	void *
 cuModuleGetFunction	void **, void *, const char *
 cuModuleGetTexRef	void **, void *, const char *

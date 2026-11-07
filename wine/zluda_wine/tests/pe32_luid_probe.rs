@@ -17,7 +17,7 @@ mod wow64_local {
 }
 use std::{ffi::c_void,sync::atomic::{AtomicU32,Ordering}};
 use wow64_protocol::*;
-static SERVER_VERSION:AtomicU32=AtomicU32::new(4);
+static SERVER_VERSION:AtomicU32=AtomicU32::new(VERSION);
 static CALLS:AtomicU32=AtomicU32::new(0);
 static CONTEXT_CALLS:AtomicU32=AtomicU32::new(0);
 #[no_mangle] pub extern "C" fn zluda_wine_attach(_: *mut c_void)->i32 {1}
@@ -26,6 +26,11 @@ static CONTEXT_CALLS:AtomicU32=AtomicU32::new(0);
     if !c.valid() || c.version!=SERVER_VERSION.load(Ordering::Relaxed){return 0xc000000du32 as i32;}
     if c.opcode==HELLO{c.result=0;return 0;}
     if c.opcode==C32_CTX_CURRENT{CONTEXT_CALLS.fetch_add(1,Ordering::Relaxed);ptr::<u32>(c.args[0]).write(0x40000001);c.result=0;return 0;}
+    if c.opcode==C32_MODULE_LOAD_EX {
+        assert_eq!(c.args[1],0xf1234567);assert_eq!(c.args[2],1);
+        assert_eq!(ptr::<u32>(c.args[3]).read(),9);assert_eq!(ptr::<u32>(c.args[4]).read(),0xfedcba98);
+        ptr::<u32>(c.args[0]).write(0x40000020);c.result=0;return 0;
+    }
     assert_eq!(c.opcode,C32_DEVICE_ATTR);
     assert!(matches!(c.args[1],50|33|34));
     CALLS.fetch_add(1,Ordering::Relaxed);
@@ -53,7 +58,7 @@ unsafe fn invoke(out:*mut i8,node:*mut u32,device:i32)->i32 {
 }
 fn main(){unsafe{
     assert_eq!(std::mem::size_of::<usize>(),4);
-    assert_eq!(VERSION,4);assert_eq!(C32_RESERVED_59,59);
+    assert_eq!(VERSION,5);assert_eq!(C32_RESERVED_59,59);
     std::env::set_var("PROTON_ENABLE_ZLUDA","1");
     // The trace opens on the first traced export; this is a Windows path, so
     // the frontend uses CreateFileA rather than Wine's Unix-path conversion.
@@ -77,13 +82,19 @@ fn main(){unsafe{
     SERVER_VERSION.store(3,Ordering::Relaxed);
     assert_eq!(wow64_pe::cuDeviceGetAttribute(&mut value,50,0),3);
     assert_eq!(value,0x12345678);
-    SERVER_VERSION.store(4,Ordering::Relaxed);
+    SERVER_VERSION.store(VERSION,Ordering::Relaxed);
     for opcode in [C32_DEVICE_ATTR,C32_RESERVED_59] {
-        let mut old=Call32::new(opcode,&[0xdeadbeef,50,0]);old.version=3;
-        assert!(!old.valid(),"v4 receiver must reject a v3 packet");
-        assert_eq!(zluda_wine_call((&mut old as *mut Call32).cast()),0xc000000du32 as i32);
-        assert_eq!(old.result,801);
+        for version in [3,4] {
+            let mut old=Call32::new(opcode,&[0xdeadbeef,50,0]);old.version=version;
+            assert!(!old.valid(),"v5 receiver must reject an old packet");
+            assert_eq!(zluda_wine_call((&mut old as *mut Call32).cast()),0xc000000du32 as i32);
+            assert_eq!(old.result,801);
+        }
     }
+    let mut module=0u32;let mut option=9u32;let mut value=0xfedcba98u32;
+    assert_eq!(raw(wow64_pe::cuModuleLoadDataEx as *const (),&[&mut module as *mut u32 as usize as u32,
+        0xf1234567,1,&mut option as *mut u32 as usize as u32,&mut value as *mut u32 as usize as u32]),0);
+    assert_eq!(module,0x40000020);
     // Cache/shared-memory hints: exact stdcall cleanup, CUDA ranges, no backend op.
     assert_eq!(raw(wow64_pe::cuCtxSetCacheConfig as *const (),&[1]),0);
     assert_eq!(raw(wow64_pe::cuCtxSetCacheConfig as *const (),&[4]),1);
@@ -114,6 +125,7 @@ fn main(){unsafe{
     assert!(rows.iter().any(|r|r.0=="cuDeviceGetAttribute"&&r.1==0&&r.2.ends_with(",22,1")),"attribute argument words");
     assert_eq!(count("cuCtxSetCacheConfig",0),1);assert_eq!(count("cuCtxSetCacheConfig",1),1);
     assert_eq!(count("cuFuncSetCacheConfig",400),1);assert_eq!(count("cuFuncSetSharedMemConfig",1),1);
-    assert_eq!(rows.len(),5+7+8,"one line per traced export call");
-    println!("PE32 SCOPE PASS: LUID=801 argument_bytes=12 stack_delta=0 no-LUID-transport; PCI50/33/34 forwarding and v3/v4 refusal passed; config hints and call trace passed");
+    assert_eq!(count("cuModuleLoadDataEx",0),1);
+    assert_eq!(rows.len(),5+7+8+1,"one line per traced export call");
+    println!("PE32 SCOPE PASS: LUID=801 argument_bytes=12 stack_delta=0 no-LUID-transport; PCI50/33/34 and ModuleLoadDataEx20-byte forwarding; v3/v4 refusal, config hints and call trace passed");
 }}

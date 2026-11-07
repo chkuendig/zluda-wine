@@ -24,6 +24,7 @@ cuMemcpyHtoD_v2
 cuMemcpyDtoH_v2
 cuMemsetD32_v2
 cuModuleLoadData
+cuModuleLoadDataEx
 cuModuleUnload
 cuModuleGetFunction
 cuLaunchKernel

@@ -75,6 +75,7 @@ cuModuleGetGlobal
 cuModuleGetGlobal_v2
 cuModuleGetTexRef
 cuModuleLoadData
+cuModuleLoadDataEx
 cuModuleUnload
 cuStreamCreate
 cuStreamDestroy
