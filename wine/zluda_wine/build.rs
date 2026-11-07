@@ -249,7 +249,7 @@ pub fn generate(here: PathBuf, out: PathBuf) {
     let entries: Vec<Vec<_>> = surface.lines().filter(|line| !line.starts_with('#'))
         .map(|line| line.split('\t').collect()).collect();
     assert_eq!(entries.len(), 788);
-    assert_eq!(entries.iter().filter(|row| row[1] == "stdcall").count(), 690);
+    assert_eq!(entries.iter().filter(|row| row[1] == "stdcall").count(), 701);
     let policy_source = fs::read_to_string(here.join("api/wrappers.tsv")).unwrap();
     let mut policy = BTreeMap::new();
     for line in policy_source.lines().filter(|line| !line.starts_with('#')) {
@@ -270,7 +270,7 @@ pub fn generate(here: PathBuf, out: PathBuf) {
     let mut names: Vec<_> = entries.iter().filter(|row| row[1] == "stdcall")
         .map(|row| row[0]).chain(private).collect();
     names.sort_unstable();
-    assert_eq!(names.len(), 692);
+    assert_eq!(names.len(), 703);
     phase(6);
     let mut ids: BTreeSet<u64> = (0..256).collect();
     let mut groups: BTreeMap<&str, Vec<_>> = BTreeMap::new();

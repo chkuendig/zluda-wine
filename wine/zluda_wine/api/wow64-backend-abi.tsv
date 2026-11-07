@@ -59,3 +59,4 @@ cuTexRefSetMaxAnisotropy	void *, unsigned
 cuTexRefSetAddress_v2	size_t *, void *, uint64_t, size_t
 cuLaunchKernel	void *, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, void *, void **, void **
 cuGetExportTable	const void **, const void *
+cuFuncGetAttribute	int *, int, void *

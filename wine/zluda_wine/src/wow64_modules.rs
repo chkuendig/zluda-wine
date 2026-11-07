@@ -50,6 +50,17 @@ unsafe fn fatbin_has_ptx(data: *const u8) -> i32 {
     ptx
 }
 
+unsafe fn legacy_ptx(image: u32) -> Result<*const u8, i32> {
+    if image > u32::MAX - 28 || read32(image + 4) != 3 { return Err(UNSUPPORTED); }
+    let table = read32(image + 24);
+    if table == 0 || table > u32::MAX - 8 { return Err(INVALID); }
+    // Version 3 contains PE32 (profile, PTX) pointers, not a native fatbin.
+    if read32(table) == 0 { return Err(209); }
+    let ptx = read32(table + 4);
+    if ptx == 0 { return Err(INVALID); }
+    Ok(ptr(ptx).cast_const())
+}
+
 impl State {
     fn release_globals(&mut self, slot: usize) {
         let id = self.handles[slot].id;
@@ -97,6 +108,8 @@ impl State {
             if wrapper.data.is_null() { return Err(INVALID); }
             if fatbin_has_ptx(wrapper.data) == 0 { return Err(209); }
             image = (&wrapper as *const Wrapper).cast();
+        } else if read32(a[1]) == 0x1ee55a01 {
+            image = legacy_ptx(a[1])?;
         }
         load_data(&mut module, image, a, extended)?;
         let metadata = (|| {
@@ -130,7 +143,6 @@ impl State {
         let stream = self.stream(a[8])?;
         let nargs = self.handles[h].nargs as usize;
         if self.context().pool == 0 || (nargs != 0 && a[9] == 0 && a[10] == 0) { return Err(INVALID); }
-        let module = self.handle(self.handles[h].owner, 2).ok_or(INVALID_HANDLE)?;
         let mut params = [0usize; MAX_ARGS + 1 + MAX_GLOBALS];
         if a[10] != 0 {
             let (mut buffer, mut bytes) = (0u32, 0u32);
@@ -164,13 +176,20 @@ impl State {
                 *param = value as usize;
             }
         }
+        self.launch_parameters(h, &a[1..8], stream, &mut params)
+    }
+    pub(super) unsafe fn launch_parameters(&self, h: usize, dimensions: &[u32], stream: usize,
+        params: &mut [usize; MAX_ARGS + 1 + MAX_GLOBALS]) -> Answer {
+        let nargs = self.handles[h].nargs as usize;
+        let module = self.handle(self.handles[h].owner, 2).ok_or(INVALID_HANDLE)?;
         params[nargs] = address(&self.context().pool) as usize;
         for (i, global) in self.handles[module].globals.iter().enumerate() {
             params[nargs + 1 + i] = address(&global.offset) as usize;
         }
         native("cuLaunchKernel", &[self.handles[h].native as u64,
-            a[1] as u64, a[2] as u64, a[3] as u64, a[4] as u64, a[5] as u64, a[6] as u64,
-            a[7] as u64, stream as u64, params.as_mut_ptr() as usize as u64, 0])
+            dimensions[0] as u64, dimensions[1] as u64, dimensions[2] as u64,
+            dimensions[3] as u64, dimensions[4] as u64, dimensions[5] as u64,
+            dimensions[6] as u64, stream as u64, params.as_mut_ptr() as usize as u64, 0])
     }
     pub(super) unsafe fn dispatch_module(&mut self, op: u32, a: &[u32; 16]) -> Answer {
         match op {
@@ -237,6 +256,8 @@ impl State {
                 Ok(())
             }
             C32_LAUNCH => self.launch(a),
+            C32_LEGACY_CONFIG | C32_LEGACY_PARAM | C32_LEGACY_LAUNCH | C32_FUNC_ATTRIBUTE |
+                C32_PARAM_TEXREF => self.dispatch_legacy(op, a),
             _ => Err(UNSUPPORTED),
         }
     }

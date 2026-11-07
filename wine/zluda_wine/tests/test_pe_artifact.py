@@ -95,7 +95,7 @@ class PEContract(unittest.TestCase):
     def test_final_link_is_static_libgcc_and_exact_def_for_each_arch(self):
         archive=self.root/'Rust archive.a'; archive.write_bytes(b'fixture only')
         log=self.root/'native-libs.log'; log.write_text('note: native-static-libs: -lkernel32 -lntdll -lkernel32\n')
-        for arch,count in [('x86_64',788),('i686',690)]:
+        for arch,count in [('x86_64',788),('i686',701)]:
             args=[sys.executable,str(HERE/'tools/link_pe.py'),'--triplet',arch,
                   '--archive',str(archive),'--native-libs-log',str(log),
                   '--output',str(self.root/'nvcuda.dll'),'--dry-run']

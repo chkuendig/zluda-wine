@@ -36,26 +36,26 @@ cuCtxSetCurrent	stdcall	33	4	57	4
 cuCtxSetLimit	stdcall	34	8	59	4 4
 cuCtxSetSharedMemConfig	stdcall	35	4	60	4
 cuCtxSynchronize	stdcall	36	0	61	
-cuD3D10CtxCreate	stub	37	0	0	
+cuD3D10CtxCreate	stdcall	37	16	691	4 4 4 4
 cuD3D10CtxCreateOnDevice	stub	38	0	0	
 cuD3D10CtxCreate_v2	stub	39	0	0	
 cuD3D10GetDevice	stdcall	40	8	64	4 4
 cuD3D10GetDevices	stub	41	0	0	
 cuD3D10GetDirect3DDevice	stub	42	0	0	
-cuD3D10MapResources	stub	43	0	0	
-cuD3D10RegisterResource	stub	44	0	0	
-cuD3D10ResourceGetMappedArray	stub	45	0	0	
-cuD3D10ResourceGetMappedPitch	stub	46	0	0	
+cuD3D10MapResources	stdcall	43	8	692	4 4
+cuD3D10RegisterResource	stdcall	44	8	693	4 4
+cuD3D10ResourceGetMappedArray	stdcall	45	12	694	4 4 4
+cuD3D10ResourceGetMappedPitch	stdcall	46	16	695	4 4 4 4
 cuD3D10ResourceGetMappedPitch_v2	stub	47	0	0	
-cuD3D10ResourceGetMappedPointer	stub	48	0	0	
+cuD3D10ResourceGetMappedPointer	stdcall	48	12	696	4 4 4
 cuD3D10ResourceGetMappedPointer_v2	stub	49	0	0	
-cuD3D10ResourceGetMappedSize	stub	50	0	0	
+cuD3D10ResourceGetMappedSize	stdcall	50	12	697	4 4 4
 cuD3D10ResourceGetMappedSize_v2	stub	51	0	0	
-cuD3D10ResourceGetSurfaceDimensions	stub	52	0	0	
+cuD3D10ResourceGetSurfaceDimensions	stdcall	52	20	698	4 4 4 4 4
 cuD3D10ResourceGetSurfaceDimensions_v2	stub	53	0	0	
-cuD3D10ResourceSetMapFlags	stub	54	0	0	
-cuD3D10UnmapResources	stub	55	0	0	
-cuD3D10UnregisterResource	stub	56	0	0	
+cuD3D10ResourceSetMapFlags	stdcall	54	8	699	4 4
+cuD3D10UnmapResources	stdcall	55	8	700	4 4
+cuD3D10UnregisterResource	stdcall	56	4	701	4
 cuD3D11CtxCreate	stdcall	57	16	65	4 4 4 4
 cuD3D11CtxCreate_v2	stdcall	58	16	66	4 4 4 4
 cuD3D11CtxCreateOnDevice	stub	59	0	0	

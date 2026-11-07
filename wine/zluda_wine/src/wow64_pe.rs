@@ -89,6 +89,25 @@ forward!(cuDriverGetVersion(out: *mut i32) => C32_VERSION [pointer(out)]);
 forward!(cuDeviceGetCount(out: *mut i32) => C32_DEVICE_COUNT [pointer(out)]);
 
 forward!(cuDeviceGet(out: *mut i32, ordinal: i32) => C32_DEVICE_GET [pointer(out), ordinal as u32]);
+#[cfg_attr(all(windows, target_arch = "x86"), no_mangle)]
+pub unsafe extern "system" fn cuD3D10GetDevice(out: *mut i32, adapter: *mut c_void) -> i32 {
+    traced("cuD3D10GetDevice", &[pointer(out), pointer(adapter)], || {
+        if adapter.is_null() { INVALID } else { call(C32_DEVICE_GET, &[pointer(out), 0]) }
+    })
+}
+#[cfg_attr(all(windows, target_arch = "x86"), no_mangle)]
+pub unsafe extern "system" fn cuD3D10CtxCreate(out: *mut *mut c_void, device: *mut i32,
+    flags: u32, graphics: *mut c_void) -> i32 {
+    traced("cuD3D10CtxCreate", &[pointer(out), pointer(device), flags, pointer(graphics)], || {
+        if out.is_null() || device.is_null() || graphics.is_null() { return INVALID; }
+        let mut ordinal = 0i32;
+        let status = call(C32_DEVICE_GET, &[pointer(&mut ordinal), 0]);
+        if status != 0 { return status; }
+        let status = call(C32_CTX_CREATE, &[pointer(out), flags, ordinal as u32]);
+        if status == 0 { std::ptr::write_unaligned(device, ordinal); }
+        status
+    })
+}
 forward!(cuDeviceGetName(out: *mut c_char, bytes: i32, dev: i32) => C32_DEVICE_NAME [pointer(out), bytes as u32, dev as u32]);
 forward!(cuDeviceGetProperties(out: *mut c_void, dev: i32) => C32_DEVICE_PROPERTIES [pointer(out), dev as u32]);
 forward!(cuDeviceComputeCapability(major: *mut i32, minor: *mut i32, dev: i32) => C32_COMPUTE_CAPABILITY [pointer(major), pointer(minor), dev as u32]);
@@ -307,6 +326,7 @@ forward!(cuMemsetD8Async(dst: u32, value: u8, count: usize, stream: *mut c_void)
 forward!(cuMemsetD16Async(dst: u32, value: u16, count: usize, stream: *mut c_void) => C32_MEMSET_ASYNC [dst, value as u32, count as u32, pointer(stream), 2]);
 forward!(cuMemsetD32Async(dst: u32, value: u32, count: usize, stream: *mut c_void) => C32_MEMSET_ASYNC [dst, value, count as u32, pointer(stream), 4]);
 forward!(cuModuleLoadData(out: *mut *mut c_void, image: *const c_void) => C32_MODULE_LOAD [pointer(out), pointer(image)]);
+forward!(cuModuleLoadFatBinary(out: *mut *mut c_void, image: *const c_void) => C32_MODULE_LOAD [pointer(out), pointer(image)]);
 forward!(cuModuleLoadDataEx(out: *mut *mut c_void, image: *const c_void, count: u32, options: *mut crate::cuda::CUjit_option,
     values: *mut *mut c_void) => C32_MODULE_LOAD_EX [pointer(out), pointer(image), count, pointer(options), pointer(values)]);
 forward!(cuModuleUnload(module: *mut c_void) => C32_MODULE_UNLOAD [pointer(module)]);
@@ -327,3 +347,22 @@ forward!(cuModuleGetFunction(out: *mut *mut c_void, module: *mut c_void, name: *
 forward!(cuLaunchKernel(function: *mut c_void, gx: u32, gy: u32, gz: u32, bx: u32, by: u32, bz: u32, shared: u32,
     stream: *mut c_void, params: *mut *mut c_void, extra: *mut *mut c_void) => C32_LAUNCH
     [pointer(function), gx, gy, gz, bx, by, bz, shared, pointer(stream), pointer(params), pointer(extra)]);
+forward!(cuFuncGetAttribute(out: *mut i32, attribute: i32, function: *mut c_void) => C32_FUNC_ATTRIBUTE
+    [pointer(function), pointer(out), attribute as u32]);
+forward!(cuFuncSetBlockShape(function: *mut c_void, x: i32, y: i32, z: i32) => C32_LEGACY_CONFIG
+    [pointer(function), 0, x as u32, y as u32, z as u32]);
+forward!(cuFuncSetSharedSize(function: *mut c_void, bytes: u32) => C32_LEGACY_CONFIG [pointer(function), 1, bytes]);
+forward!(cuParamSetSize(function: *mut c_void, bytes: u32) => C32_LEGACY_PARAM [pointer(function), 0, bytes]);
+forward!(cuParamSeti(function: *mut c_void, offset: i32, value: u32) => C32_LEGACY_PARAM
+    [pointer(function), 1, offset as u32, value]);
+forward!(cuParamSetf(function: *mut c_void, offset: i32, value: f32) => C32_LEGACY_PARAM
+    [pointer(function), 1, offset as u32, value.to_bits()]);
+forward!(cuParamSetv(function: *mut c_void, offset: i32, values: *mut c_void, bytes: u32) => C32_LEGACY_PARAM
+    [pointer(function), 2, offset as u32, pointer(values), bytes]);
+forward!(cuParamSetTexRef(function: *mut c_void, unit: i32, texref: *mut c_void) => C32_PARAM_TEXREF
+    [pointer(function), unit as u32, pointer(texref)]);
+forward!(cuLaunch(function: *mut c_void) => C32_LEGACY_LAUNCH [pointer(function), 1, 1, 0]);
+forward!(cuLaunchGrid(function: *mut c_void, x: i32, y: i32) => C32_LEGACY_LAUNCH
+    [pointer(function), x as u32, y as u32, 0]);
+forward!(cuLaunchGridAsync(function: *mut c_void, x: i32, y: i32, stream: *mut c_void) => C32_LEGACY_LAUNCH
+    [pointer(function), x as u32, y as u32, pointer(stream)]);

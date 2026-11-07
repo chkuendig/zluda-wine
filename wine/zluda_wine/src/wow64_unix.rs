@@ -6,6 +6,7 @@ use crate::{unixlib, wow64_protocol::*};
 use std::{ffi::{c_char, c_void, CStr, CString}, sync::{Mutex, OnceLock}};
 
 #[path = "wow64_modules.rs"] mod modules;
+#[path = "wow64_legacy.rs"] mod legacy;
 #[path = "wow64_ops.rs"] mod ops;
 #[cfg(test)] #[path = "../tests/pci_parity.rs"] mod pci_tests;
 const POOL_BYTES: u32 = 512 * 1024 * 1024;
@@ -25,6 +26,7 @@ struct Global { name: CString, offset: u32, bytes: u32 }
 struct Handle {
     native: usize, name: Option<CString>, id: u32, owner: u32, ctx_id: u32,
     kind: u8, nargs: u32, args: [ArgInfo; MAX_ARGS], globals: Vec<Global>,
+    legacy: legacy::LegacyLaunch,
 }
 #[derive(Clone, Copy, Default)]
 struct Allocation { offset: u32, bytes: u32, reserved: u32, owner: u32 }

@@ -24,7 +24,7 @@ def definition(triplet):
         elif row[1] == 'stdcall':
             # Same decorated symbols/--kill-at route as the original C PE32.
             lines.append(f' {row[0]}@{row[3]} @{row[4]}')
-    expected = 788 if triplet == 'x86_64' else 690
+    expected = 788 if triplet == 'x86_64' else 701
     assert len(lines) - 2 == expected
     return '\n'.join(lines) + '\n'
 

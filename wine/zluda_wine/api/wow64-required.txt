@@ -59,3 +59,4 @@ cuMemsetD16_v2
 cuMemsetD8Async
 cuMemsetD16Async
 cuMemsetD32Async
+cuFuncGetAttribute

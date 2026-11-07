@@ -31,6 +31,14 @@ static CONTEXT_CALLS:AtomicU32=AtomicU32::new(0);
         assert_eq!(ptr::<u32>(c.args[3]).read(),9);assert_eq!(ptr::<u32>(c.args[4]).read(),0xfedcba98);
         ptr::<u32>(c.args[0]).write(0x40000020);c.result=0;return 0;
     }
+    if c.opcode==C32_DEVICE_GET {assert_eq!(c.args[1],0);ptr::<u32>(c.args[0]).write(0);c.result=0;return 0;}
+    if c.opcode==C32_CTX_CREATE {assert_eq!(&c.args[1..3],&[4,0]);ptr::<u32>(c.args[0]).write(0x40000010);c.result=0;return 0;}
+    if c.opcode==C32_MODULE_LOAD {assert_eq!(c.args[1],0x1ee55001);ptr::<u32>(c.args[0]).write(0x40000020);c.result=0;return 0;}
+    if matches!(c.opcode,C32_LEGACY_CONFIG|C32_LEGACY_PARAM|C32_LEGACY_LAUNCH|C32_FUNC_ATTRIBUTE|C32_PARAM_TEXREF) {
+        assert_eq!(c.args[0],0x40000030);
+        if c.opcode==C32_FUNC_ATTRIBUTE {assert_eq!(c.args[2],0);ptr::<u32>(c.args[1]).write(128);}
+        c.result=0;return 0;
+    }
     assert_eq!(c.opcode,C32_DEVICE_ATTR);
     assert!(matches!(c.args[1],50|33|34));
     CALLS.fetch_add(1,Ordering::Relaxed);
@@ -58,7 +66,7 @@ unsafe fn invoke(out:*mut i8,node:*mut u32,device:i32)->i32 {
 }
 fn main(){unsafe{
     assert_eq!(std::mem::size_of::<usize>(),4);
-    assert_eq!(VERSION,5);assert_eq!(C32_RESERVED_59,59);
+    assert_eq!(VERSION,6);assert_eq!(C32_RESERVED_59,59);
     std::env::set_var("PROTON_ENABLE_ZLUDA","1");
     // The trace opens on the first traced export; this is a Windows path, so
     // the frontend uses CreateFileA rather than Wine's Unix-path conversion.
@@ -84,9 +92,9 @@ fn main(){unsafe{
     assert_eq!(value,0x12345678);
     SERVER_VERSION.store(VERSION,Ordering::Relaxed);
     for opcode in [C32_DEVICE_ATTR,C32_RESERVED_59] {
-        for version in [3,4] {
+        for version in [3,4,5] {
             let mut old=Call32::new(opcode,&[0xdeadbeef,50,0]);old.version=version;
-            assert!(!old.valid(),"v5 receiver must reject an old packet");
+            assert!(!old.valid(),"v6 receiver must reject an old packet");
             assert_eq!(zluda_wine_call((&mut old as *mut Call32).cast()),0xc000000du32 as i32);
             assert_eq!(old.result,801);
         }
@@ -95,6 +103,31 @@ fn main(){unsafe{
     assert_eq!(raw(wow64_pe::cuModuleLoadDataEx as *const (),&[&mut module as *mut u32 as usize as u32,
         0xf1234567,1,&mut option as *mut u32 as usize as u32,&mut value as *mut u32 as usize as u32]),0);
     assert_eq!(module,0x40000020);
+    let mut device=-1i32;let mut context=0u32;
+    assert_eq!(raw(wow64_pe::cuD3D10GetDevice as *const (),&[&mut device as *mut i32 as usize as u32,1]),0);
+    assert_eq!(device,0);
+    assert_eq!(raw(wow64_pe::cuD3D10GetDevice as *const (),&[&mut device as *mut i32 as usize as u32,0]),1);
+    assert_eq!(raw(wow64_pe::cuD3D10CtxCreate as *const (),&[&mut context as *mut u32 as usize as u32,
+        &mut device as *mut i32 as usize as u32,4,1]),0);
+    assert_eq!(context,0x40000010);
+    assert_eq!(raw(wow64_stubs::cuD3D10RegisterResource as *const (),&[1,0]),801);
+    assert_eq!(raw(wow64_pe::cuModuleLoadFatBinary as *const (),&[&mut module as *mut u32 as usize as u32,0x1ee55001]),0);
+    let function=0x40000030;
+    for (f,a) in [
+        (wow64_pe::cuFuncSetBlockShape as *const (),vec![function,8,4,1]),
+        (wow64_pe::cuFuncSetSharedSize as *const (),vec![function,128]),
+        (wow64_pe::cuParamSetSize as *const (),vec![function,16]),
+        (wow64_pe::cuParamSeti as *const (),vec![function,0,0xfedcba98]),
+        (wow64_pe::cuParamSetf as *const (),vec![function,4,3.5f32.to_bits()]),
+        (wow64_pe::cuParamSetv as *const (),vec![function,8,1,8]),
+        (wow64_pe::cuParamSetTexRef as *const (),vec![function,u32::MAX,0x40000050]),
+        (wow64_pe::cuLaunch as *const (),vec![function]),
+        (wow64_pe::cuLaunchGrid as *const (),vec![function,2,3]),
+        (wow64_pe::cuLaunchGridAsync as *const (),vec![function,2,3,0]),
+    ] {assert_eq!(raw(f,&a),0);}
+    let mut attribute=0u32;
+    assert_eq!(raw(wow64_pe::cuFuncGetAttribute as *const (),&[&mut attribute as *mut u32 as usize as u32,0,function]),0);
+    assert_eq!(attribute,128);
     // Cache/shared-memory hints: exact stdcall cleanup, CUDA ranges, no backend op.
     assert_eq!(raw(wow64_pe::cuCtxSetCacheConfig as *const (),&[1]),0);
     assert_eq!(raw(wow64_pe::cuCtxSetCacheConfig as *const (),&[4]),1);
@@ -126,6 +159,6 @@ fn main(){unsafe{
     assert_eq!(count("cuCtxSetCacheConfig",0),1);assert_eq!(count("cuCtxSetCacheConfig",1),1);
     assert_eq!(count("cuFuncSetCacheConfig",400),1);assert_eq!(count("cuFuncSetSharedMemConfig",1),1);
     assert_eq!(count("cuModuleLoadDataEx",0),1);
-    assert_eq!(rows.len(),5+7+8+1,"one line per traced export call");
-    println!("PE32 SCOPE PASS: LUID=801 argument_bytes=12 stack_delta=0 no-LUID-transport; PCI50/33/34 and ModuleLoadDataEx20-byte forwarding; v3/v4 refusal, config hints and call trace passed");
+    assert_eq!(rows.len(),5+7+8+1+16,"one line per traced export call");
+    println!("PE32 SCOPE PASS: LUID=801; PCI and JIT forwarding; legacy D3D10 context, unsupported registration, fatbin/config/param/launch exact stdcall cleanup; v3/v4/v5 refusal, hints and call trace passed");
 }}

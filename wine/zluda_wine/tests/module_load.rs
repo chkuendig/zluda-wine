@@ -125,3 +125,22 @@ fn jit_backend_error_is_preserved() { unsafe {
     });
     assert_eq!(module, 0x11223344);
 }}
+
+#[test]
+fn legacy_fatbin_selects_the_pe32_ptx_pointer_and_rejects_missing_images() { unsafe {
+    let memory = Memory::new();
+    memory.0.write(0x1ee55a01); memory.0.add(1).write(3);
+    memory.0.add(6).write(memory.address(16));
+    memory.0.add(16).write(memory.address(32));
+    memory.0.add(17).write(memory.address(48));
+    assert_eq!(legacy_ptx(memory.address(0)).unwrap() as usize, memory.address(48) as usize);
+    memory.0.add(1).write(2);
+    assert_eq!(legacy_ptx(memory.address(0)), Err(UNSUPPORTED));
+    memory.0.add(1).write(3); memory.0.add(16).write(0);
+    assert_eq!(legacy_ptx(memory.address(0)), Err(209));
+    memory.0.add(16).write(memory.address(32)); memory.0.add(17).write(0);
+    assert_eq!(legacy_ptx(memory.address(0)), Err(INVALID));
+    memory.0.add(6).write(0);
+    assert_eq!(legacy_ptx(memory.address(0)), Err(INVALID));
+    assert_eq!(legacy_ptx(u32::MAX), Err(UNSUPPORTED));
+}}

@@ -59,3 +59,14 @@ cuGraphAddNode_v2	backend_status	graph-union-host-callback
 cuGraphNodeSetParams	backend_status	graph-union-host-callback
 cuGraphExecNodeSetParams	backend_status	graph-union-host-callback
 cuGraphNodeGetParams	backend_status	graph-union-host-callback
+cuD3D10CtxCreate	pending	pe32-d3d10-only
+cuD3D10MapResources	pending	pe32-d3d10-only
+cuD3D10RegisterResource	pending	pe32-d3d10-only
+cuD3D10ResourceGetMappedArray	pending	pe32-d3d10-only
+cuD3D10ResourceGetMappedPitch	pending	pe32-d3d10-only
+cuD3D10ResourceGetMappedPointer	pending	pe32-d3d10-only
+cuD3D10ResourceGetMappedSize	pending	pe32-d3d10-only
+cuD3D10ResourceGetSurfaceDimensions	pending	pe32-d3d10-only
+cuD3D10ResourceSetMapFlags	pending	pe32-d3d10-only
+cuD3D10UnmapResources	pending	pe32-d3d10-only
+cuD3D10UnregisterResource	pending	pe32-d3d10-only
