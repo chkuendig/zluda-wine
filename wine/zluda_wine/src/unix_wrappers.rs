@@ -133,13 +133,6 @@ pub(crate) unsafe extern "C" fn dispatch(pointer: *mut c_void) -> i32 {
         else { crate::unix_callbacks::service(call) }
     } else if call.function==crate::context_protocol::INITIALIZE {
         crate::unix_context_storage::initialize(call)
-    } else if call.function == crate::interop_protocol::ENVIRONMENT {
-        if !enabled() {Err(CUerror::NOT_INITIALIZED)}
-        else {
-            call.args[0]=u64::from(std::env::var_os("ZLUDA_D3D11_CPU_COPY").is_some_and(|v|v=="1"))*crate::interop_protocol::COPY
-                |u64::from(std::env::var_os("ZLUDA_D3D11_CPU_COPY_ENABLE_MT").is_some_and(|v|v=="1"))*crate::interop_protocol::ENABLE_MT;
-            call.result=0;Ok(())
-        }
     } else if call.function == crate::luid_protocol::UUID {
         use std::os::unix::ffi::OsStrExt;
         (|| {

@@ -17,7 +17,6 @@ include!(concat!(env!("OUT_DIR"), "/dark_types.rs"));
 mod unixlib;
 mod legacy;
 #[cfg(target_arch = "x86_64")] mod luid_protocol;
-#[cfg(target_arch = "x86_64")] mod interop_protocol;
 #[cfg(target_arch = "x86_64")]
 mod proc_address;
 #[cfg(target_arch = "x86_64")]
@@ -39,8 +38,6 @@ mod integrity_algorithm { include!(concat!(env!("OUT_DIR"), "/integrity_algorith
 #[cfg(windows)] mod pe_sync;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_luid;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_external;
-#[cfg(all(windows, target_arch = "x86_64"))] mod d3d11;
-#[cfg(all(windows, target_arch = "x86_64"))] mod pe_interop;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_context_storage;
 #[cfg(target_os = "linux")] mod unix_context_storage;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_dark_owned;

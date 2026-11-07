@@ -7,9 +7,8 @@ interface to ZLUDA's Linux CUDA library.
 
 The 64-bit DLL forwards typed CUDA calls. The 32-bit DLL translates pointers and
 handles through Wine's modern WoW64 interface to the same 64-bit Unix module.
-Callbacks return to Windows threads, and optional D3D11 interoperation copies
-texture data through CPU memory. CUDA coverage depends on both the bridge and
-the backend; unsupported entry points return CUDA errors.
+Callbacks return to Windows threads. CUDA coverage depends on both the bridge
+and the backend; unsupported entry points return CUDA errors.
 
 ## Building
 
@@ -143,8 +142,7 @@ Check that Wine loads this `nvcuda.dll`, that `cuInit(0)` returns `CUDA_SUCCESS`
 and that device enumeration finds the AMD GPU. A device-query sample should
 print its name; running a CUDA kernel then checks execution as well as loading.
 For a 32-bit program, `ZLUDA_WINE_CALL_LOG` can name a writable log path for
-optional call tracing. `ZLUDA_D3D11_CPU_COPY=1` enables the optional D3D11 copy
-path when an application needs it.
+optional call tracing.
 
 GPU PhysX also needs patched dxvk-nvapi, `DXVK_NVAPI_ALLOW_OTHER_DRIVERS=1`
 and `DXVK_ENABLE_NVAPI=1`; see [Notes](#notes).

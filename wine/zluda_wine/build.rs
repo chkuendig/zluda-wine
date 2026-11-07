@@ -396,9 +396,6 @@ pub fn generate(here: PathBuf, out: PathBuf) {
     let luid_path = here.join("src/luid_protocol.rs");
     println!("cargo:rerun-if-changed={}",luid_path.display());
     schema.push_str(&fs::read_to_string(luid_path).unwrap());
-    let interop_path=here.join("src/interop_protocol.rs");
-    println!("cargo:rerun-if-changed={}",interop_path.display());
-    schema.push_str(&fs::read_to_string(interop_path).unwrap());
     let context_path=here.join("src/context_protocol.rs");
     println!("cargo:rerun-if-changed={}",context_path.display());
     schema.push_str(&fs::read_to_string(context_path).unwrap());
