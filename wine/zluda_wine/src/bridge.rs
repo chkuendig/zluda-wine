@@ -46,8 +46,10 @@ mod integrity_algorithm { include!(concat!(env!("OUT_DIR"), "/integrity_algorith
 #[cfg(target_os = "linux")] mod unix_wrappers;
 mod wow64_protocol;
 mod wow64_trace;
+#[cfg(any(test, all(windows, target_arch = "x86")))] mod d3d10_copy;
 #[cfg(target_os = "linux")] mod wow64_unix;
 #[cfg(all(windows, target_arch = "x86"))] mod wow64_pe;
+#[cfg(all(windows, target_arch = "x86"))] mod wow64_d3d10;
 #[cfg(all(windows, target_arch = "x86"))] mod wow64_local;
 #[cfg(all(windows, target_arch = "x86"))]
 #[allow(dead_code)]

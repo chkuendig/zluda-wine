@@ -20,6 +20,15 @@ cuCtxSetSharedMemConfig
 cuCtxSynchronize
 cuD3D10CtxCreate
 cuD3D10GetDevice
+cuD3D10MapResources
+cuD3D10RegisterResource
+cuD3D10ResourceGetMappedPitch
+cuD3D10ResourceGetMappedPointer
+cuD3D10ResourceGetMappedSize
+cuD3D10ResourceGetSurfaceDimensions
+cuD3D10ResourceSetMapFlags
+cuD3D10UnmapResources
+cuD3D10UnregisterResource
 cuDeviceComputeCapability
 cuDeviceGet
 cuDeviceGetAttribute
