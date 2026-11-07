@@ -58,7 +58,7 @@ unsafe fn legacy_ptx(image: u32) -> Result<*const u8, i32> {
     if read32(table) == 0 { return Err(209); }
     let ptx = read32(table + 4);
     if ptx == 0 { return Err(INVALID); }
-    Ok(ptr(ptx).cast_const())
+    Ok(ptr::<u8>(ptx).cast_const())
 }
 
 impl State {
