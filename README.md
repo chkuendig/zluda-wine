@@ -195,18 +195,21 @@ Apply these patches in order to dxvk-nvapi
 [commit `f9fdf268`](https://github.com/jp7677/dxvk-nvapi/commit/f9fdf268),
 the Valve Proton 11.0 pin:
 
-1. [Allow other drivers in CUDA GPU enumeration](patches/dxvk-nvapi/0001-zluda-physx-honor-DXVK_NVAPI_ALLOW_OTHER_DRIVERS-in-.patch)
-   honors `DXVK_NVAPI_ALLOW_OTHER_DRIVERS=1` so ZLUDA-backed GPUs appear in
-   the compute topology. Without it, Batman: Arkham Knight's PhysX probe sees
-   an empty topology and disables the in-game PhysX option.
-2. [Handle the legacy PhysX compute topology V2 query](patches/dxvk-nvapi/0002-Handle-the-legacy-PhysX-compute-topology-V2-query-Ar.patch)
-   supports the V2 query and its private NVAPI entry point, returning
-   driver-owned storage for PhysXDevice 2.8.4, which initializes only the
-   version field.
+1. [Bound V1 topology writes](patches/dxvk-nvapi/0001-nvapi-gpu-Bound-CUDA-topology-V1-writes.patch).
+2. [Discover CUDA compute GPUs through nvcuda](patches/dxvk-nvapi/0002-nvapi-Discover-CUDA-compute-GPUs-through-nvcuda.patch).
+3. [Support V2 topology for GPUs confirmed by CUDA](patches/dxvk-nvapi/0003-nvapi-gpu-Allow-CUDA-topology-V2-for-GPUs-confirmed-.patch).
+4. [Add the private PhysX topology query](patches/dxvk-nvapi/0004-nvapi-Add-undocumented-CUDA-topology-entry-point-0x3.patch).
+5. [Allow other drivers in every topology test section](patches/dxvk-nvapi/0005-tests-Allow-other-drivers-in-every-CUDA-topology-sec.patch).
+6. [Match CUDA devices by PCI location](patches/dxvk-nvapi/0006-nvapi-Match-CUDA-devices-by-PCI-location-instead-of-.patch).
+7. [Restore test adapter LUIDs](patches/dxvk-nvapi/0007-tests-Give-CUDA-topology-test-adapters-a-LUID-again.patch).
+
+CUDA-capable GPUs are discovered through `nvcuda.dll` and matched to DXGI
+adapters by PCI domain, bus and device. The V2 and private PhysX queries use
+driver-owned storage that remains valid until `NvAPI_Unload`.
 
 Install and enable the patched dxvk-nvapi for the prefix, and launch with
 `DXVK_NVAPI_ALLOW_OTHER_DRIVERS=1` and `DXVK_ENABLE_NVAPI=1`. Proton also sets
 `PROTON_FORCE_NVAPI=1`. These patches do not require DXVK to report an NVIDIA
 vendor ID. The [Valve Proton fork](https://github.com/chkuendig/Proton/tree/proton-11.0-zluda)
-applies all three patches automatically; for a manual build, apply the Wine
-patch to Proton Wine and the dxvk-nvapi patches in the order above.
+applies the Wine patch and this series automatically. For a manual build,
+apply the Wine patch to Proton Wine and the dxvk-nvapi patches in the order above.
