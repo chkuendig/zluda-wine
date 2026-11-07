@@ -35,7 +35,11 @@ mod integrity_algorithm { include!(concat!(env!("OUT_DIR"), "/integrity_algorith
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_thunks;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_wrappers;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_platform;
-#[cfg(windows)] mod pe_sync;
+#[cfg(any(windows,test))] mod pe_sync;
+#[cfg(any(windows,test))] mod interop;
+#[cfg(all(target_arch="x86_64",any(test,windows)))] mod d3d11;
+#[cfg(all(target_arch="x86_64",any(test,windows)))] mod pe_interop;
+#[cfg(all(test,target_arch="x86_64",not(windows)))] #[path="../tests/interop.rs"] mod interop_tests;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_luid;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_external;
 #[cfg(all(windows, target_arch = "x86_64"))] mod pe_context_storage;
@@ -46,8 +50,10 @@ mod integrity_algorithm { include!(concat!(env!("OUT_DIR"), "/integrity_algorith
 #[cfg(target_os = "linux")] mod unix_wrappers;
 mod wow64_protocol;
 mod wow64_trace;
+#[cfg(any(test, all(windows, target_arch = "x86")))] mod d3d10_copy;
 #[cfg(target_os = "linux")] mod wow64_unix;
 #[cfg(all(windows, target_arch = "x86"))] mod wow64_pe;
+#[cfg(all(windows, target_arch = "x86"))] mod wow64_d3d10;
 #[cfg(all(windows, target_arch = "x86"))] mod wow64_local;
 #[cfg(all(windows, target_arch = "x86"))]
 #[allow(dead_code)]

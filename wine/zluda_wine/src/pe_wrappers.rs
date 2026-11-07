@@ -5,6 +5,7 @@ use std::{ffi::{c_char,c_void,CStr},sync::{atomic::{AtomicBool,Ordering}}};
 use crate::pe_sync::Once as OnceLock;
 pub use crate::pe_callback_api::*;
 pub use crate::pe_external::*;
+pub use crate::pe_interop::*;
 pub use crate::pe_luid::cuDeviceGetLuid;
 pub use crate::pe_dark_tables::cuGetExportTable;
 static ATTACHED:AtomicBool=AtomicBool::new(false);
@@ -67,6 +68,6 @@ pub unsafe extern "system" fn cuD3D9CtxCreate(out:*mut CUcontext,device:*mut CUd
 macro_rules! context {($name:ident,$native:literal)=>{#[no_mangle] pub unsafe extern "system" fn $name(out:*mut CUcontext,device:*mut CUdevice,flags:u32,_graphics:*mut ID3D11Device)->CUresult {if device.is_null(){return Err(CUerror::INVALID_VALUE);}raw("cuDeviceGet",&[unixlib::pack(device),0])?;raw($native,&[unixlib::pack(out),u64::from(flags),unixlib::pack(*device)])}};}
 context!(cuD3D11CtxCreate,"cuCtxCreate");context!(cuD3D11CtxCreate_v2,"cuCtxCreate_v2");
 macro_rules! graphics {($name:ident,$ty:ty)=>{#[no_mangle] pub unsafe extern "system" fn $name(_out:*mut CUgraphicsResource,_resource:*mut $ty,flags:u32)->CUresult {Err(if flags!=0 {CUerror::INVALID_VALUE}else{CUerror::UNKNOWN})}};}
-graphics!(cuGraphicsD3D9RegisterResource,IDirect3DResource9);graphics!(cuGraphicsD3D10RegisterResource,ID3D10Resource);graphics!(cuGraphicsD3D11RegisterResource,ID3D11Resource);
+graphics!(cuGraphicsD3D9RegisterResource,IDirect3DResource9);graphics!(cuGraphicsD3D10RegisterResource,ID3D10Resource);
 #[no_mangle]
 pub unsafe extern "system" fn cuDriverGetGpuCodeIsaVersion(_a:*mut c_void,_b:*mut c_void)->CUresult {available(b"cuDriverGetGpuCodeIsaVersion\0")?;Err(CUerror::UNKNOWN)}

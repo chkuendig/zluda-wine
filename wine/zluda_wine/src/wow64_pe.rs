@@ -6,6 +6,10 @@ use std::{ffi::{c_char, c_void}, sync::atomic::{AtomicBool, Ordering}};
 use crate::pe_sync::{Mutex, Once as OnceLock};
 use crate::wow64_local::storage_destroy;
 pub use crate::wow64_local::cuGetExportTable;
+pub use crate::wow64_d3d10::{cuD3D10CtxCreate,cuD3D10RegisterResource,cuD3D10UnregisterResource,
+    cuD3D10MapResources,cuD3D10UnmapResources,cuD3D10ResourceSetMapFlags,
+    cuD3D10ResourceGetMappedPointer,cuD3D10ResourceGetMappedPitch,cuD3D10ResourceGetMappedSize,
+    cuD3D10ResourceGetSurfaceDimensions};
 
 static ATTACHED: AtomicBool = AtomicBool::new(false);
 static HANDSHAKE: OnceLock<bool> = OnceLock::new();
@@ -95,8 +99,7 @@ pub unsafe extern "system" fn cuD3D10GetDevice(out: *mut i32, adapter: *mut c_vo
         if adapter.is_null() { INVALID } else { call(C32_DEVICE_GET, &[pointer(out), 0]) }
     })
 }
-#[cfg_attr(all(windows, target_arch = "x86"), no_mangle)]
-pub unsafe extern "system" fn cuD3D10CtxCreate(out: *mut *mut c_void, device: *mut i32,
+pub(super) unsafe fn d3d10_context(out: *mut *mut c_void, device: *mut i32,
     flags: u32, graphics: *mut c_void) -> i32 {
     traced("cuD3D10CtxCreate", &[pointer(out), pointer(device), flags, pointer(graphics)], || {
         if out.is_null() || device.is_null() || graphics.is_null() { return INVALID; }
@@ -134,7 +137,7 @@ forward!(cuMemFree_v2(device: u32) => C32_FREE [device]);
 pub unsafe extern "system" fn cuCtxDestroy_v2(ctx: *mut c_void) -> i32 {
     traced("cuCtxDestroy_v2", &[pointer(ctx)], || {
         let status = call(C32_CTX_DESTROY, &[pointer(ctx)]);
-        if status == 0 { storage_destroy(ctx); }
+        if status == 0 { crate::wow64_d3d10::destroyed(pointer(ctx)); storage_destroy(ctx); }
         status
     })
 }
@@ -145,7 +148,7 @@ pub unsafe extern "system" fn cuCtxDetach(ctx: *mut c_void) -> i32 {
     traced("cuCtxDetach", &[pointer(ctx)], || {
         let mut destroyed = 0u32;
         let status = call(C32_CTX_DETACH, &[pointer(ctx), pointer(&mut destroyed)]);
-        if status == 0 && destroyed != 0 { storage_destroy(ctx); }
+        if status == 0 && destroyed != 0 { crate::wow64_d3d10::destroyed(pointer(ctx)); storage_destroy(ctx); }
         status
     })
 }
