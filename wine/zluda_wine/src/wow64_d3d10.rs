@@ -119,7 +119,7 @@ unsafe fn register(resource:usize,flags:u32)->Answer{
     let mut host=Vec::new();host.try_reserve_exact(layout.bytes as usize).map_err(|_|OOM)?;host.resize(layout.bytes as usize,0);
     REGISTRY.lock().resources.try_reserve(1).map_err(|_|OOM)?;
     let bytes=layout.bytes.checked_add(alignment-1).ok_or(INVALID)?;let mut allocation=0;
-    cuda(C32_ALLOC,&[pointer(&mut allocation),bytes])?;
+    cuda(C32_ALLOC,&[pointer(&mut allocation),bytes,4])?;
     let device=d3d10_copy::align(allocation,alignment)?;
     let r=Resource{identity,source,staging,context,multithread,ready,ctx,layout,allocation,device,host,flags:0,mapped:false,poisoned:false};
     REGISTRY.lock().resources.push(Box::new(r));Ok(())

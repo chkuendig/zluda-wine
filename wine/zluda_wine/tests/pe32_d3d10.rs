@@ -100,7 +100,7 @@ pub unsafe fn submit(c:&Call32)->Option<i32>{
     let a=&c.args;match c.opcode{
         C32_CTX_DEVICE=>{ptr::<u32>(a[0]).write(0);Some(0)}
         C32_DEVICE_ATTR if matches!(a[1],14|51)=>{ptr::<u32>(a[0]).write(256);Some(0)}
-        C32_ALLOC=>{assert_eq!(DEPTH.load(Relaxed),0);let p=NEXT_ALLOC.fetch_add((a[1]+255)&!255,Relaxed);
+        C32_ALLOC=>{if a[0]==0||a[2]!=4{return Some(INVALID);}assert_eq!(DEPTH.load(Relaxed),0);let p=NEXT_ALLOC.fetch_add((a[1]+255)&!255,Relaxed);
             let mut gpu=GPU.lock().unwrap();gpu.resize((p+a[1]) as usize,0x77);ptr::<u32>(a[0]).write(p);Some(0)}
         C32_FREE=>{assert_eq!(DEPTH.load(Relaxed),0);FREES.fetch_add(1,Relaxed);Some(0)}
         C32_HTOD|C32_DTOH=>{assert_eq!(DEPTH.load(Relaxed),0);let mut g=GPU.lock().unwrap();
@@ -115,6 +115,23 @@ unsafe fn map_one(resource:usize,unmap:bool)->i32{
     let mut p=resource as *mut c_void;raw(if unmap{api::cuD3D10UnmapResources as *const ()}else{api::cuD3D10MapResources as *const ()},&[1,pointer(&mut p)])
 }
 unsafe fn pointer_of(resource:usize)->u32{let mut p=0;assert_eq!(raw(api::cuD3D10ResourceGetMappedPointer as *const (),&[pointer(&mut p),resource as u32,0]),0);p}
+unsafe fn registration_none_roundtrips(){
+    let frees=FREES.load(Relaxed);
+    for (resource,texture,name) in [(fixture().objects[1],true,"Texture2D"),(fixture().objects[6],false,"Buffer")]{
+        let initial={let i=IMAGES.lock().unwrap();if texture{i.texture[0]}else{i.buffer[0]}};
+        assert_eq!(raw(api::cuD3D10RegisterResource as *const (),&[resource as u32,0]),0);
+        assert_eq!(map_one(resource,false),0);let device=pointer_of(resource) as usize;
+        {let mut g=GPU.lock().unwrap();assert_eq!(g[device],initial);g[device]=initial^0x5a;}
+        if texture{let (mut pitch,mut slice)=(0,0);
+            assert_eq!(raw(api::cuD3D10ResourceGetMappedPitch as *const (),&[pointer(&mut pitch),pointer(&mut slice),resource as u32,0]),0);
+            assert_eq!((pitch,slice),(256,512));}
+        assert_eq!(map_one(resource,true),0);
+        {let mut i=IMAGES.lock().unwrap();let value=if texture{&mut i.texture[0]}else{&mut i.buffer[0]};assert_eq!(*value,initial^0x5a);*value=initial;}
+        assert_eq!(raw(api::cuD3D10UnregisterResource as *const (),&[resource as u32]),0);
+        println!("PE32 D3D10 {name}/NONE PASS: registration, pointer/pitch, fresh copy roundtrip, unregister");
+    }
+    assert_eq!(FREES.load(Relaxed),frees+2);
+}
 pub unsafe fn off(){
     let before=QUERIES.load(Relaxed);let mut canary=[0xdeadbeefu32;4];let p=pointer(canary.as_mut_ptr());
     for value in [None,Some("0"),Some("true"),Some("01"),Some("1 ")]{
@@ -174,6 +191,7 @@ pub unsafe fn run(first_context:u32){
     assert_eq!(raw(api::cuD3D10ResourceGetMappedPitch as *const (),&[pointer(&mut pitch),0,buffer as u32,0]),400);
     assert_eq!(map_one(buffer,true),0);assert_eq!(IMAGES.lock().unwrap().buffer[0],99);
     assert_eq!(raw(api::cuD3D10UnregisterResource as *const (),&[buffer as u32]),0);assert_eq!(FREES.load(Relaxed),2);
+    registration_none_roundtrips();
     FLAGS.store(1,Relaxed);let mut second=0;let mut ordinal=0;
     assert_eq!(raw(api::cuD3D10CtxCreate as *const (),&[pointer(&mut second),pointer(&mut ordinal),4,device() as u32]),0);
     assert_eq!(raw(api::cuD3D10RegisterResource as *const (),&[texture as u32,0]),0);

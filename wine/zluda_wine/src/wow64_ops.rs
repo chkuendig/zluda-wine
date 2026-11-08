@@ -231,3 +231,4 @@ impl State {
 }
 
 #[cfg(test)] #[path = "../tests/texref_2d.rs"] mod pitched_tests;
+#[cfg(test)] #[path = "../tests/allocation_width.rs"] mod allocation_tests;
