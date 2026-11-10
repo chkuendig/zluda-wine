@@ -259,8 +259,9 @@ pub unsafe extern "system" fn cuMemAllocHost_v2(out: *mut *mut c_void, bytes: us
 #[cfg_attr(all(windows, target_arch = "x86"), no_mangle)]
 pub unsafe extern "system" fn cuMemFreeHost(memory: *mut c_void) -> i32 {
     traced("cuMemFreeHost", &[pointer(memory)], || {
+        if memory.is_null() { return 0; }
         let mut allocations = HOST.lock();
-        let Some(slot) = allocations.iter_mut().find(|slot| !memory.is_null() && **slot == memory as usize) else { return INVALID; };
+        let Some(slot) = allocations.iter_mut().find(|slot| **slot == memory as usize) else { return INVALID; };
         let result = call(C32_HOST_UNREGISTER, &[pointer(memory)]);
         if result == 0 { VirtualFree(memory, 0, 0x8000); *slot = 0; }
         result

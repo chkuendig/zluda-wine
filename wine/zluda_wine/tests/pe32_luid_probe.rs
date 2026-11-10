@@ -97,6 +97,9 @@ fn main(){unsafe{
     assert_eq!(raw(wow64_pe::cuFuncSetCacheConfig as *const (),&[0,2]),400);
     assert_eq!(raw(wow64_pe::cuFuncSetSharedMemConfig as *const (),&[0x40000010,3]),1);
     assert_eq!(CONTEXT_CALLS.load(Ordering::Relaxed),4,"only the four context hints query the current context");
+    // The fixture rejects unexpected transport calls, including host unregister.
+    assert_eq!(raw(wow64_pe::cuMemFreeHost as *const (), &[0]), 0);
+    assert_eq!(raw(wow64_pe::cuMemFreeHost as *const (), &[0x1234]), INVALID);
     let path=std::path::PathBuf::from(format!("{}.{}",trace.display(),std::process::id()));
     let log=std::fs::read_to_string(&path).expect("PE32 call trace file");
     let _=std::fs::remove_file(&path);
@@ -114,6 +117,8 @@ fn main(){unsafe{
     assert!(rows.iter().any(|r|r.0=="cuDeviceGetAttribute"&&r.1==0&&r.2.ends_with(",22,1")),"attribute argument words");
     assert_eq!(count("cuCtxSetCacheConfig",0),1);assert_eq!(count("cuCtxSetCacheConfig",1),1);
     assert_eq!(count("cuFuncSetCacheConfig",400),1);assert_eq!(count("cuFuncSetSharedMemConfig",1),1);
-    assert_eq!(rows.len(),5+7+8,"one line per traced export call");
+    assert_eq!(count("cuMemFreeHost",0),1);
+    assert_eq!(count("cuMemFreeHost",INVALID),1);
+    assert_eq!(rows.len(),5+7+8+2,"one line per traced export call");
     println!("PE32 SCOPE PASS: LUID=801 argument_bytes=12 stack_delta=0 no-LUID-transport; PCI50/33/34 forwarding and v3/v4 refusal passed; config hints and call trace passed");
 }}
